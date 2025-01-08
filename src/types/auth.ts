@@ -10,10 +10,8 @@ export const signupSchema = z.object({
   gender: z.enum(["male", "female", "other"], {
     required_error: "Please select a gender",
   }),
-  security_code: z.string().refine((val) => val === "hrd712", {
-    message: "Invalid security code",
-  }),
-  location: z.string().min(3, "Location must be at least 3 characters"),
+  security_code: z.string().min(1, "Security code is required"),
+  position: z.string().min(3, "Position must be at least 3 characters"),
   full_name: z.string().min(3, "Full name must be at least 3 characters"),
 });
 
