@@ -57,19 +57,43 @@ export const SignupForm = () => {
   };
 
   return (
-    <Card className="p-6 w-full max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <PersonalInfoFields form={form} loading={loading} />
-          <ContactInfoFields form={form} loading={loading} />
-          <AdditionalInfoFields form={form} loading={loading} />
-          
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing up..." : "Sign Up"}
-          </Button>
-        </form>
-      </Form>
-    </Card>
+    <div className="w-full">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Create an Account</h2>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Fill in your details to get started
+        </p>
+      </div>
+      <Card className="p-6 shadow-lg border-0 bg-white/50 backdrop-blur-sm dark:bg-gray-800/50">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Personal Information</h3>
+                <PersonalInfoFields form={form} loading={loading} />
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Contact Information</h3>
+                <ContactInfoFields form={form} loading={loading} />
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Additional Information</h3>
+                <AdditionalInfoFields form={form} loading={loading} />
+              </div>
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-primary hover:bg-primary/90 text-white" 
+              disabled={loading}
+            >
+              {loading ? "Creating account..." : "Create Account"}
+            </Button>
+          </form>
+        </Form>
+      </Card>
+    </div>
   );
 };

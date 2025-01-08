@@ -65,61 +65,66 @@ const Login = () => {
 
   return (
     <Layout>
-      <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-        {showSignup ? (
-          <>
-            <SignupForm />
-            <p className="text-center mt-4">
-              Already have an account?{" "}
-              <button
-                onClick={() => setShowSignup(false)}
-                className="text-blue-600 hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-2xl font-bold mb-6 text-center">Welcome Back</h1>
-            <Auth
-              supabaseClient={supabase}
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: '#2563eb',
-                      brandAccent: '#1d4ed8',
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          {showSignup ? (
+            <>
+              <SignupForm />
+              <p className="text-center mt-6 text-sm text-gray-600">
+                Already have an account?{" "}
+                <button
+                  onClick={() => setShowSignup(false)}
+                  className="font-medium text-primary hover:text-primary/90 transition-colors"
+                >
+                  Sign in
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-center">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Sign in to your account to continue
+                </p>
+              </div>
+              <div className="mt-8">
+                <Auth
+                  supabaseClient={supabase}
+                  appearance={{
+                    theme: ThemeSupa,
+                    variables: {
+                      default: {
+                        colors: {
+                          brand: '#1E40AF',
+                          brandAccent: '#1E40AF',
+                        },
+                      },
                     },
-                  },
-                },
-              }}
-              providers={[]}
-              localization={{
-                variables: {
-                  sign_in: {
-                    email_label: "Outlook Email",
-                    email_input_placeholder: "your.email@outlook.com",
-                  },
-                  sign_up: {
-                    email_label: "Outlook Email",
-                    email_input_placeholder: "your.email@outlook.com",
-                  },
-                },
-              }}
-            />
-            <p className="text-center mt-4">
-              Don't have an account?{" "}
-              <button
-                onClick={() => setShowSignup(true)}
-                className="text-blue-600 hover:underline"
-              >
-                Sign up
-              </button>
-            </p>
-          </>
-        )}
+                  }}
+                  providers={[]}
+                  localization={{
+                    variables: {
+                      sign_in: {
+                        email_label: "Outlook Email",
+                        email_input_placeholder: "your.email@outlook.com",
+                      },
+                    },
+                  }}
+                />
+              </div>
+              <p className="text-center mt-6 text-sm text-gray-600">
+                Don't have an account?{" "}
+                <button
+                  onClick={() => setShowSignup(true)}
+                  className="font-medium text-primary hover:text-primary/90 transition-colors"
+                >
+                  Sign up
+                </button>
+              </p>
+            </>
+          )}
+        </div>
       </div>
     </Layout>
   );
