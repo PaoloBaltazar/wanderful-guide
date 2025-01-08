@@ -25,24 +25,32 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#4A5D5C",
+          DEFAULT: "#1E40AF",
           foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "#D4C5B2",
-          foreground: "#000000",
+          DEFAULT: "#0D9488",
+          foreground: "#FFFFFF",
         },
-        accent: {
-          DEFAULT: "#9B4B3C",
+        success: {
+          DEFAULT: "#059669",
+          foreground: "#FFFFFF",
+        },
+        warning: {
+          DEFAULT: "#D97706",
           foreground: "#FFFFFF",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "#E11D48",
+          foreground: "#FFFFFF",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -58,24 +66,8 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        fadeIn: {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        fadeIn: "fadeIn 0.5s ease-out",
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
       },
     },
   },
