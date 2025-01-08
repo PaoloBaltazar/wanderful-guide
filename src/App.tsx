@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import Index from "@/pages/Index";
 import Tasks from "@/pages/Tasks";
 import Login from "@/pages/Login";
-import Verify from "@/pages/Verify";
 import SuccessConfirmation from "@/pages/SuccessConfirmation";
 import Notifications from "@/pages/Notifications";
 import Calendar from "@/pages/Calendar";
@@ -30,7 +29,6 @@ function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/verify" element={<Verify />} />
             <Route path="/success-confirmation" element={<SuccessConfirmation />} />
             <Route path="/" element={<Index />} />
             <Route path="/tasks" element={<Tasks />} />

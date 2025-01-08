@@ -55,7 +55,8 @@ export const SignupForm = () => {
         description: "Please check your email for verification link",
       });
       
-      navigate("/verify");
+      // Instead of redirecting to verify, we'll keep the user on the login page
+      navigate("/login");
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
       toast({

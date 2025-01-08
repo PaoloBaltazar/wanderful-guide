@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { Auth } from "@supabase/auth-ui-react";
@@ -11,24 +11,46 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showSignup, setShowSignup] = useState(false);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const checkUser = async () => {
+    const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         navigate("/");
       }
     };
 
-    checkUser();
+    checkSession();
+
+    // Handle email confirmation from URL
+    const token_hash = searchParams.get("token_hash");
+    const type = searchParams.get("type");
+    
+    if (token_hash && type) {
+      const handleEmailConfirmation = async () => {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash,
+          type: type as any,
+        });
+        
+        if (!error) {
+          navigate("/success-confirmation");
+        } else {
+          toast({
+            title: "Error",
+            description: "Invalid or expired verification link",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      handleEmailConfirmation();
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === "SIGNED_IN") {
-          if (!session?.user.email_confirmed_at) {
-            navigate("/verify");
-            return;
-          }
           toast({
             title: "Success",
             description: "Successfully signed in",
@@ -39,7 +61,7 @@ const Login = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [navigate, toast, searchParams]);
 
   return (
     <Layout>
