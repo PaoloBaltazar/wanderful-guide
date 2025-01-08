@@ -29,7 +29,7 @@ export const handleSignup = async (data: SignupFormValues) => {
       data: {
         username: data.username,
         contact_number: data.contact_number,
-        location: data.location,
+        position: data.position,
         full_name: data.full_name,
       },
       emailRedirectTo: `${window.location.origin}/verify`,
