@@ -7,11 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormValues } from "@/types/auth";
-import { handleSignup, handleAuthError } from "@/utils/auth";
+import { handleSignup, handleAuthError, checkExistingEmail } from "@/utils/auth";
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   AlertDialog,
   AlertDialogContent,
@@ -21,13 +20,11 @@ import {
   AlertDialogFooter,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { CheckCircle2, Mail } from "lucide-react";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const form = useForm<SignupFormValues>({
@@ -49,7 +46,6 @@ export const SignupForm = () => {
   const onSubmit = async (data: SignupFormValues) => {
     try {
       setLoading(true);
-      setValidationError(null);
       
       // Check if security code matches
       if (data.security_code !== "hrd712") {
@@ -62,44 +58,14 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check if email exists in profiles table
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', data.email)
-        .maybeSingle();
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error("Error checking email:", profileError);
-        setValidationError("An error occurred while checking email availability. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      if (existingProfile) {
-        setValidationError("This email is already registered and confirmed. Please use a different email or login instead.");
-        setLoading(false);
-        return;
-      }
-
-      // Check for unconfirmed signups
-      const { data: { users }, error: authError } = await supabase.auth.admin.listUsers({
-        perPage: 1000,
-      });
-
-      if (authError) {
-        console.error("Error checking unconfirmed users:", authError);
-        setValidationError("An error occurred while checking email status. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      const unconfirmedUser = users?.find(user => 
-        user.email === data.email && !user.email_confirmed_at
-      );
-
-      if (unconfirmedUser) {
-        setValidationError("This email address is already registered but not confirmed. Please check your email for the verification link.");
+      // Check if email already exists
+      const existingUser = await checkExistingEmail(data.email);
+      if (existingUser) {
+        toast({
+          title: "Email Already Registered",
+          description: "This email is already registered. Please use a different email or try logging in.",
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
@@ -111,8 +77,11 @@ export const SignupForm = () => {
       
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
-      console.error("Signup error:", errorMessage);
-      setValidationError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -120,6 +89,7 @@ export const SignupForm = () => {
 
   const handleConfirmationClose = () => {
     setShowConfirmation(false);
+    // Force navigation to login page
     window.location.href = "/login";
   };
 
@@ -131,17 +101,6 @@ export const SignupForm = () => {
           Fill in your details to get started
         </p>
       </div>
-
-      {validationError && (
-        <Alert variant="destructive" className="mb-6 border-2 border-destructive/50">
-          <AlertCircle className="h-5 w-5" />
-          <AlertTitle className="ml-2">Error</AlertTitle>
-          <AlertDescription className="ml-2 mt-1">
-            {validationError}
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Card className="p-6 shadow-lg border-0 bg-white/50 backdrop-blur-sm dark:bg-gray-800/50">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
