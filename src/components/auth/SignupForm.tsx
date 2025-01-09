@@ -5,12 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormValues } from "@/types/auth";
-import { handleSignup, handleAuthError, checkExistingEmail } from "@/utils/auth";
+import { handleSignup, handleAuthError } from "@/utils/auth";
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
+import { supabase } from "@/lib/supabase";
 import { 
   AlertDialog,
   AlertDialogContent,
@@ -20,11 +22,12 @@ import {
   AlertDialogFooter,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, Mail } from "lucide-react";
+import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const form = useForm<SignupFormValues>({
@@ -46,6 +49,7 @@ export const SignupForm = () => {
   const onSubmit = async (data: SignupFormValues) => {
     try {
       setLoading(true);
+      setError(null);
       
       // Check if security code matches
       if (data.security_code !== "hrd712") {
@@ -58,14 +62,20 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check if email already exists
-      const existingUser = await checkExistingEmail(data.email);
-      if (existingUser) {
-        toast({
-          title: "Email Already Registered",
-          description: "This email is already registered. Please use a different email or try logging in.",
-          variant: "destructive",
-        });
+      // Check if email exists in profiles table
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', data.email)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Error checking email:", profileError);
+        throw new Error("An error occurred while checking email availability");
+      }
+
+      if (existingProfile) {
+        setError("This email is already registered. Please use a different email or try logging in.");
         setLoading(false);
         return;
       }
@@ -77,11 +87,7 @@ export const SignupForm = () => {
       
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -89,7 +95,6 @@ export const SignupForm = () => {
 
   const handleConfirmationClose = () => {
     setShowConfirmation(false);
-    // Force navigation to login page
     window.location.href = "/login";
   };
 
@@ -101,6 +106,14 @@ export const SignupForm = () => {
           Fill in your details to get started
         </p>
       </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <Card className="p-6 shadow-lg border-0 bg-white/50 backdrop-blur-sm dark:bg-gray-800/50">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
