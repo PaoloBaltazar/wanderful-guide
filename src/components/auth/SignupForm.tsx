@@ -11,7 +11,7 @@ import { handleSignup, handleAuthError, checkExistingEmail } from "@/utils/auth"
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   AlertDialog,
   AlertDialogContent,
@@ -71,6 +71,7 @@ export const SignupForm = () => {
       if (authData.user) {
         // Email exists and is confirmed
         setValidationError("This email is already registered and confirmed. Please use a different email or login instead.");
+        console.error("Email already registered and confirmed:", data.email);
         setLoading(false);
         return;
       }
@@ -79,6 +80,7 @@ export const SignupForm = () => {
       const existingUser = await checkExistingEmail(data.email);
       if (existingUser) {
         setValidationError("This email address is already registered but not confirmed. Please check your email for the verification link.");
+        console.error("Email registered but not confirmed:", data.email);
         setLoading(false);
         return;
       }
@@ -90,6 +92,7 @@ export const SignupForm = () => {
       
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
+      console.error("Signup error:", errorMessage);
       if (errorMessage.includes("User already registered")) {
         setValidationError("This email is already registered. Please check your email for verification or try logging in.");
       } else {
@@ -119,9 +122,12 @@ export const SignupForm = () => {
       </div>
 
       {validationError && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{validationError}</AlertDescription>
+        <Alert variant="destructive" className="mb-6 border-2 border-destructive/50">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle className="ml-2">Error</AlertTitle>
+          <AlertDescription className="ml-2 mt-1">
+            {validationError}
+          </AlertDescription>
         </Alert>
       )}
 
