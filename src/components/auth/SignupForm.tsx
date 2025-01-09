@@ -62,23 +62,32 @@ export const SignupForm = () => {
         return;
       }
 
-      // First check if the email exists in auth.users
-      const { data: authData } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: "dummy-password", // We use a dummy password as we just want to check if the email exists
-      });
+      // Check if email exists in profiles table
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', data.email)
+        .single();
 
-      if (authData.user) {
-        // Email exists and is confirmed
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error("Error checking email:", profileError);
+        throw new Error("An error occurred while checking email availability.");
+      }
+
+      if (existingProfile) {
         setValidationError("This email is already registered and confirmed. Please use a different email or login instead.");
         console.error("Email already registered and confirmed:", data.email);
         setLoading(false);
         return;
       }
 
-      // Check if email exists in profiles but not confirmed
-      const existingUser = await checkExistingEmail(data.email);
-      if (existingUser) {
+      // Check for unconfirmed signups
+      const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+      const unconfirmedUser = users?.find(user => 
+        user.email === data.email && !user.email_confirmed_at
+      );
+
+      if (unconfirmedUser) {
         setValidationError("This email address is already registered but not confirmed. Please check your email for the verification link.");
         console.error("Email registered but not confirmed:", data.email);
         setLoading(false);
