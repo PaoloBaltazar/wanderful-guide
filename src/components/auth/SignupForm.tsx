@@ -11,6 +11,7 @@ import { handleSignup, handleAuthError, checkExistingEmail } from "@/utils/auth"
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   AlertDialog,
   AlertDialogContent,
@@ -20,11 +21,13 @@ import {
   AlertDialogFooter,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, Mail } from "lucide-react";
+import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const form = useForm<SignupFormValues>({
@@ -46,6 +49,7 @@ export const SignupForm = () => {
   const onSubmit = async (data: SignupFormValues) => {
     try {
       setLoading(true);
+      setValidationError(null);
       
       // Check if security code matches
       if (data.security_code !== "hrd712") {
@@ -58,14 +62,23 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check if email already exists
+      // First check if the email exists in auth.users
+      const { data: authData } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: "dummy-password", // We use a dummy password as we just want to check if the email exists
+      });
+
+      if (authData.user) {
+        // Email exists and is confirmed
+        setValidationError("This email is already registered and confirmed. Please use a different email or login instead.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if email exists in profiles but not confirmed
       const existingUser = await checkExistingEmail(data.email);
       if (existingUser) {
-        toast({
-          title: "Email Already Registered",
-          description: "This email is already registered. Please use a different email or try logging in.",
-          variant: "destructive",
-        });
+        setValidationError("This email address is already registered but not confirmed. Please check your email for the verification link.");
         setLoading(false);
         return;
       }
@@ -77,11 +90,15 @@ export const SignupForm = () => {
       
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      if (errorMessage.includes("User already registered")) {
+        setValidationError("This email is already registered. Please check your email for verification or try logging in.");
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -89,7 +106,6 @@ export const SignupForm = () => {
 
   const handleConfirmationClose = () => {
     setShowConfirmation(false);
-    // Force navigation to login page
     window.location.href = "/login";
   };
 
@@ -101,6 +117,14 @@ export const SignupForm = () => {
           Fill in your details to get started
         </p>
       </div>
+
+      {validationError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{validationError}</AlertDescription>
+        </Alert>
+      )}
+
       <Card className="p-6 shadow-lg border-0 bg-white/50 backdrop-blur-sm dark:bg-gray-800/50">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
