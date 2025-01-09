@@ -11,9 +11,20 @@ import { handleSignup, handleAuthError } from "@/utils/auth";
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
+import { 
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { CheckCircle2, Mail } from "lucide-react";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const form = useForm<SignupFormValues>({
@@ -36,14 +47,20 @@ export const SignupForm = () => {
     try {
       setLoading(true);
       
-      await handleSignup(data);
-
-      toast({
-        title: "Success",
-        description: "Please check your email for verification link",
-      });
+      // Check if security code matches
+      if (data.security_code !== "hrd712") {
+        toast({
+          title: "Invalid Security Code",
+          description: "Please enter the correct security code to create an account.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       
-      navigate("/login");
+      await handleSignup(data);
+      setShowConfirmation(true);
+      
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
       toast({
@@ -54,6 +71,12 @@ export const SignupForm = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmationClose = () => {
+    setShowConfirmation(false);
+    // Force navigation to login page
+    window.location.href = "/login";
   };
 
   return (
@@ -94,6 +117,33 @@ export const SignupForm = () => {
           </form>
         </Form>
       </Card>
+
+      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-green-500" />
+              Account Created Successfully
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-4">
+              <p>
+                Your account has been created successfully! Please check your email to verify your account.
+              </p>
+              <div className="flex justify-center">
+                <Mail className="h-12 w-12 text-blue-500" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                A verification link has been sent to your email address. Click the link to activate your account.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogAction onClick={handleConfirmationClose}>
+              Go to Login
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

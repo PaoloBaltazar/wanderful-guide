@@ -1,8 +1,9 @@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UseFormReturn } from "react-hook-form";
+import { UseFormReturn, useWatch } from "react-hook-form";
 import { SignupFormValues } from "@/types/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 interface AdditionalInfoFieldsProps {
   form: UseFormReturn<SignupFormValues>;
@@ -10,26 +11,25 @@ interface AdditionalInfoFieldsProps {
 }
 
 export const AdditionalInfoFields = ({ form, loading }: AdditionalInfoFieldsProps) => {
+  const securityCode = useWatch({
+    control: form.control,
+    name: "security_code",
+  });
+
+  const isValidCode = securityCode === "hrd712";
+  const showValidation = securityCode && securityCode.length > 0;
+
   return (
     <>
       <FormField
         control={form.control}
-        name="gender"
+        name="position"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Gender</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormLabel>Position</FormLabel>
+            <FormControl>
+              <Input {...field} disabled={loading} />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}
@@ -44,20 +44,23 @@ export const AdditionalInfoFields = ({ form, loading }: AdditionalInfoFieldsProp
             <FormControl>
               <Input {...field} type="text" disabled={loading} />
             </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="position"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Position</FormLabel>
-            <FormControl>
-              <Input {...field} disabled={loading} />
-            </FormControl>
+            {showValidation && (
+              <Alert variant={isValidCode ? "default" : "destructive"} className="mt-2">
+                <AlertDescription className="flex items-center gap-2">
+                  {isValidCode ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Security code is correct
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4" />
+                      Invalid security code. Please enter the correct code to proceed.
+                    </>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
             <FormMessage />
           </FormItem>
         )}

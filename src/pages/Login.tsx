@@ -101,6 +101,14 @@ const Login = () => {
                         },
                       },
                     },
+                    style: {
+                      anchor: { display: 'none' }, // This will forcefully hide all anchor tags
+                      message: { display: 'none' }, // Hide any additional messages
+                    },
+                    className: {
+                      anchor: 'hidden', // Belt and suspenders approach
+                      button: 'w-full bg-primary hover:bg-primary/90 text-white',
+                    },
                   }}
                   providers={[]}
                   localization={{
@@ -111,6 +119,7 @@ const Login = () => {
                       },
                     },
                   }}
+                  view="sign_in"
                 />
               </div>
               <p className="text-center mt-6 text-sm text-gray-600">
