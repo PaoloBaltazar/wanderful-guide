@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormValues } from "@/types/auth";
-import { handleSignup, handleAuthError, checkExistingEmail } from "@/utils/auth";
+import { handleSignup, handleAuthError } from "@/utils/auth";
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
@@ -67,29 +67,39 @@ export const SignupForm = () => {
         .from('profiles')
         .select('email')
         .eq('email', data.email)
-        .single();
+        .maybeSingle();
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error("Error checking email:", profileError);
-        throw new Error("An error occurred while checking email availability.");
+        setValidationError("An error occurred while checking email availability. Please try again.");
+        setLoading(false);
+        return;
       }
 
       if (existingProfile) {
         setValidationError("This email is already registered and confirmed. Please use a different email or login instead.");
-        console.error("Email already registered and confirmed:", data.email);
         setLoading(false);
         return;
       }
 
       // Check for unconfirmed signups
-      const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
+      const { data: { users }, error: authError } = await supabase.auth.admin.listUsers({
+        perPage: 1000,
+      });
+
+      if (authError) {
+        console.error("Error checking unconfirmed users:", authError);
+        setValidationError("An error occurred while checking email status. Please try again.");
+        setLoading(false);
+        return;
+      }
+
       const unconfirmedUser = users?.find(user => 
         user.email === data.email && !user.email_confirmed_at
       );
 
       if (unconfirmedUser) {
         setValidationError("This email address is already registered but not confirmed. Please check your email for the verification link.");
-        console.error("Email registered but not confirmed:", data.email);
         setLoading(false);
         return;
       }
@@ -102,15 +112,7 @@ export const SignupForm = () => {
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
       console.error("Signup error:", errorMessage);
-      if (errorMessage.includes("User already registered")) {
-        setValidationError("This email is already registered. Please check your email for verification or try logging in.");
-      } else {
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      setValidationError(errorMessage);
     } finally {
       setLoading(false);
     }
