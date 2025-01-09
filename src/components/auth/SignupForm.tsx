@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormValues } from "@/types/auth";
-import { handleSignup, handleAuthError } from "@/utils/auth";
+import { handleSignup, handleAuthError, checkExistingEmail } from "@/utils/auth";
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
@@ -57,9 +57,23 @@ export const SignupForm = () => {
         setLoading(false);
         return;
       }
+
+      // Check if email already exists
+      const existingUser = await checkExistingEmail(data.email);
+      if (existingUser) {
+        toast({
+          title: "Email Already Registered",
+          description: "This email is already registered. Please use a different email or try logging in.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       
-      await handleSignup(data);
-      setShowConfirmation(true);
+      const result = await handleSignup(data);
+      if (result.success) {
+        setShowConfirmation(true);
+      }
       
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);

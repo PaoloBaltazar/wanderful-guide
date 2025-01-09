@@ -6,22 +6,17 @@ export const checkExistingEmail = async (email: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('email')
-    .eq('email', email);
+    .eq('email', email)
+    .single();
 
   if (error && error.code !== 'PGRST116') {
     throw new Error("An error occurred while checking email availability.");
   }
 
-  return data && data.length > 0 ? data[0] : null;
+  return data;
 };
 
 export const handleSignup = async (data: SignupFormValues) => {
-  const existingUser = await checkExistingEmail(data.email);
-
-  if (existingUser) {
-    throw new Error("This email is already registered. Please use a different email or try logging in.");
-  }
-
   const { error: signUpError } = await supabase.auth.signUp({
     email: data.email,
     password: data.password,
