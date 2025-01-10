@@ -13,21 +13,11 @@ import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
 import { supabase } from "@/lib/supabase";
-import { 
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -123,7 +113,7 @@ export const SignupForm = () => {
 
       const result = await handleSignup(data);
       if (result.success) {
-        setShowConfirmation(true);
+        navigate("/success-confirmation");
       } else {
         setError(result.error);
       }
@@ -133,11 +123,6 @@ export const SignupForm = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleConfirmationClose = () => {
-    setShowConfirmation(false);
-    navigate("/success-confirmation");
   };
 
   return (
@@ -192,20 +177,6 @@ export const SignupForm = () => {
           </form>
         </Form>
       </Card>
-
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Account Created</AlertDialogTitle>
-            <AlertDialogDescription>
-              Please check your email to verify your account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={handleConfirmationClose}>OK</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
