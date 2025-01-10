@@ -92,6 +92,7 @@ export const SignupForm = () => {
       setLoading(true);
       setError(null);
       
+      // Check security code
       if (data.security_code !== "hrd712") {
         toast({
           title: "Invalid Security Code",
@@ -102,9 +103,20 @@ export const SignupForm = () => {
         return;
       }
 
-      // Exit early if there's an email error
-      if (emailError) {
-        setError(emailError);
+      // Check for existing email one more time before submission
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', data.email)
+        .maybeSingle();
+
+      if (existingProfile) {
+        setError("This email is already registered. Please use a different email.");
+        setEmailError("This email is already registered");
+        form.setError("email", {
+          type: "manual",
+          message: "This email is already registered"
+        });
         setLoading(false);
         return;
       }
