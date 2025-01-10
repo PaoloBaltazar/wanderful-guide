@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -14,12 +14,10 @@ import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
 import { supabase } from "@/lib/supabase";
 import { AlertCircle } from "lucide-react";
-import { useDebounce } from "@/hooks/use-debounce";
 
 export const SignupForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const form = useForm<SignupFormValues>({
@@ -36,46 +34,7 @@ export const SignupForm = () => {
       position: "",
       full_name: "",
     },
-    mode: "onChange",
   });
-
-  const email = form.watch("email");
-  const debouncedEmail = useDebounce(email, 500);
-
-  // Check for existing email on change
-  useEffect(() => {
-    const checkEmail = async () => {
-      if (!debouncedEmail) return;
-
-      try {
-        const { data: existingProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('email', debouncedEmail)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Error checking email:", profileError);
-          return;
-        }
-
-        if (existingProfile) {
-          setEmailError("This email is already registered");
-          form.setError("email", {
-            type: "manual",
-            message: "This email is already registered"
-          });
-        } else {
-          setEmailError(null);
-          form.clearErrors("email");
-        }
-      } catch (error) {
-        console.error("Error checking email:", error);
-      }
-    };
-
-    checkEmail();
-  }, [debouncedEmail, form]);
 
   const onSubmit = async (data: SignupFormValues) => {
     try {
@@ -93,16 +52,19 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check for existing email one more time before submission
-      const { data: existingProfile } = await supabase
+      // Check for existing email
+      const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
         .select('email')
         .eq('email', data.email)
         .maybeSingle();
 
+      if (profileError) {
+        throw new Error("Error checking email availability");
+      }
+
       if (existingProfile) {
-        setError("This email is already registered. Please use a different email.");
-        setEmailError("This email is already registered");
+        setError("This email is already registered. Please use a different email address.");
         form.setError("email", {
           type: "manual",
           message: "This email is already registered"
@@ -153,12 +115,6 @@ export const SignupForm = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Contact Information</h3>
                 <ContactInfoFields form={form} loading={loading} />
-                {emailError && (
-                  <div className="text-sm text-red-500 mt-1 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {emailError}
-                  </div>
-                )}
               </div>
               
               <div className="space-y-4">
@@ -170,7 +126,7 @@ export const SignupForm = () => {
             <Button 
               type="submit" 
               className="w-full bg-primary hover:bg-primary/90 text-white" 
-              disabled={loading || !!emailError}
+              disabled={loading}
             >
               {loading ? "Creating account..." : "Create Account"}
             </Button>
