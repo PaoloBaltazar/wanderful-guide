@@ -16,26 +16,33 @@ export const checkExistingEmail = async (email: string) => {
   return data;
 };
 
-export const handleSignup = async (data: SignupFormValues) => {
-  const { error: signUpError } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password,
-    options: {
-      data: {
-        username: data.username,
-        contact_number: data.contact_number,
-        position: data.position,
-        full_name: data.full_name,
+export const handleSignup = async (data: SignupFormValues): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          username: data.username,
+          contact_number: data.contact_number,
+          position: data.position,
+          full_name: data.full_name,
+        },
+        emailRedirectTo: `${window.location.origin}/verify`,
       },
-      emailRedirectTo: `${window.location.origin}/verify`,
-    },
-  });
+    });
 
-  if (signUpError) {
-    throw signUpError;
+    if (signUpError) {
+      return { success: false, error: signUpError.message };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    return { 
+      success: false, 
+      error: error.message || "An error occurred during signup" 
+    };
   }
-
-  return { success: true };
 };
 
 export const handleAuthError = (error: AuthError) => {
