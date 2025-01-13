@@ -52,10 +52,16 @@ export const SignupForm = () => {
         return;
       }
 
-      // First check if the email already exists
-      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(data.email);
-      
-      if (existingUser) {
+      // Check if email exists using Edge Function
+      const { data: checkEmailResponse, error: checkEmailError } = await supabase.functions.invoke('check-email', {
+        body: { email: data.email }
+      });
+
+      if (checkEmailError) {
+        throw new Error('Failed to check email availability');
+      }
+
+      if (checkEmailResponse.exists) {
         toast({
           title: "Email Already Registered",
           description: "This email address is already registered. Please use a different email or try logging in.",
