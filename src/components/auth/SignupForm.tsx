@@ -52,7 +52,34 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check for existing email
+      // First check auth.users table for existing email
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(data.email);
+      
+      if (authError && authError.message !== "User not found") {
+        toast({
+          title: "Error",
+          description: "Error checking email availability. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (authUser) {
+        toast({
+          title: "Email Already Registered",
+          description: "This email is already registered. Please use a different email address.",
+          variant: "destructive",
+        });
+        form.setError("email", {
+          type: "manual",
+          message: "This email is already registered"
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Then check profiles table as a backup
       const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
         .select('email')
@@ -83,6 +110,7 @@ export const SignupForm = () => {
         return;
       }
 
+      // If we get here, the email is unique, proceed with signup
       const result = await handleSignup(data);
       if (result.success) {
         navigate("/success-confirmation");
