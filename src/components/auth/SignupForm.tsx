@@ -52,34 +52,7 @@ export const SignupForm = () => {
         return;
       }
 
-      // First check auth.users table for existing email
-      const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(data.email);
-      
-      if (authError && authError.message !== "User not found") {
-        toast({
-          title: "Error",
-          description: "Error checking email availability. Please try again.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (authUser) {
-        toast({
-          title: "Email Already Registered",
-          description: "This email is already registered. Please use a different email address.",
-          variant: "destructive",
-        });
-        form.setError("email", {
-          type: "manual",
-          message: "This email is already registered"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Then check profiles table as a backup
+      // Check profiles table for existing email
       const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
         .select('email')
@@ -115,12 +88,25 @@ export const SignupForm = () => {
       if (result.success) {
         navigate("/success-confirmation");
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "An error occurred during signup",
-          variant: "destructive",
-        });
-        setError(result.error);
+        // Check if the error message indicates the email is already registered
+        if (result.error?.toLowerCase().includes("email already registered")) {
+          toast({
+            title: "Email Already Registered",
+            description: "This email is already registered. Please use a different email address.",
+            variant: "destructive",
+          });
+          form.setError("email", {
+            type: "manual",
+            message: "This email is already registered"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "An error occurred during signup",
+            variant: "destructive",
+          });
+          setError(result.error);
+        }
       }
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
