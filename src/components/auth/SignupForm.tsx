@@ -8,7 +8,7 @@ import { Form } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormValues } from "@/types/auth";
-import { handleSignup, handleAuthError } from "@/utils/auth";
+import { handleAuthError } from "@/utils/auth";
 import { PersonalInfoFields } from "./PersonalInfoFields";
 import { ContactInfoFields } from "./ContactInfoFields";
 import { AdditionalInfoFields } from "./AdditionalInfoFields";
@@ -52,7 +52,24 @@ export const SignupForm = () => {
         return;
       }
 
-      // First check auth.users table for existing email using signUp with emailRedirectTo
+      // First check if the email already exists
+      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(data.email);
+      
+      if (existingUser) {
+        toast({
+          title: "Email Already Registered",
+          description: "This email address is already registered. Please use a different email or try logging in.",
+          variant: "destructive",
+        });
+        form.setError("email", {
+          type: "manual",
+          message: "This email is already registered"
+        });
+        setLoading(false);
+        return;
+      }
+
+      // If we get here, the email is unique, proceed with signup
       const { error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -67,19 +84,6 @@ export const SignupForm = () => {
       });
 
       if (signUpError) {
-        if (signUpError.message.toLowerCase().includes("email already")) {
-          toast({
-            title: "Email Already Registered",
-            description: "This email address is already registered. Please use a different email or try logging in.",
-            variant: "destructive",
-          });
-          form.setError("email", {
-            type: "manual",
-            message: "This email is already registered"
-          });
-          setLoading(false);
-          return;
-        }
         throw signUpError;
       }
 
