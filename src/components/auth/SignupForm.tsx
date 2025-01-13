@@ -52,62 +52,40 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check profiles table for existing email
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', data.email)
-        .maybeSingle();
+      // First check auth.users table for existing email using signUp with emailRedirectTo
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            username: data.username,
+            contact_number: data.contact_number,
+            position: data.position,
+            full_name: data.full_name,
+          },
+        },
+      });
 
-      if (profileError) {
-        toast({
-          title: "Error",
-          description: "Error checking email availability. Please try again.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (existingProfile) {
-        toast({
-          title: "Email Already Registered",
-          description: "This email is already registered. Please use a different email address.",
-          variant: "destructive",
-        });
-        form.setError("email", {
-          type: "manual",
-          message: "This email is already registered"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // If we get here, the email is unique, proceed with signup
-      const result = await handleSignup(data);
-      if (result.success) {
-        navigate("/success-confirmation");
-      } else {
-        // Check if the error message indicates the email is already registered
-        if (result.error?.toLowerCase().includes("email already registered")) {
+      if (signUpError) {
+        if (signUpError.message.toLowerCase().includes("email already")) {
           toast({
             title: "Email Already Registered",
-            description: "This email is already registered. Please use a different email address.",
+            description: "This email address is already registered. Please use a different email or try logging in.",
             variant: "destructive",
           });
           form.setError("email", {
             type: "manual",
             message: "This email is already registered"
           });
-        } else {
-          toast({
-            title: "Error",
-            description: result.error || "An error occurred during signup",
-            variant: "destructive",
-          });
-          setError(result.error);
+          setLoading(false);
+          return;
         }
+        throw signUpError;
       }
+
+      // If we get here, the signup was successful
+      navigate("/success-confirmation");
+      
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
       toast({
