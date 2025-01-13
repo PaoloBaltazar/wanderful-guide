@@ -60,11 +60,21 @@ export const SignupForm = () => {
         .maybeSingle();
 
       if (profileError) {
-        throw new Error("Error checking email availability");
+        toast({
+          title: "Error",
+          description: "Error checking email availability. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
       if (existingProfile) {
-        setError("This email is already registered. Please use a different email address.");
+        toast({
+          title: "Email Already Registered",
+          description: "This email is already registered. Please use a different email address.",
+          variant: "destructive",
+        });
         form.setError("email", {
           type: "manual",
           message: "This email is already registered"
@@ -77,10 +87,20 @@ export const SignupForm = () => {
       if (result.success) {
         navigate("/success-confirmation");
       } else {
+        toast({
+          title: "Error",
+          description: result.error || "An error occurred during signup",
+          variant: "destructive",
+        });
         setError(result.error);
       }
     } catch (error: any) {
       const errorMessage = error.message || handleAuthError(error);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
       setError(errorMessage);
     } finally {
       setLoading(false);
