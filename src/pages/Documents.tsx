@@ -1,61 +1,164 @@
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { 
   Plus, 
   FileText, 
   Download, 
   File, 
   FileCheck,
-  Search
+  Search,
+  Edit,
+  Eye
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Document {
   id: string;
   title: string;
-  category: string;
-  lastModified: string;
-  status: "draft" | "published";
-  size: string;
+  file_type: string;
+  file_path: string;
+  size: number;
+  created_at: string;
+  content: string | null;
 }
 
 const Documents = () => {
-  const [documents] = useState<Document[]>([
-    {
-      id: "1",
-      title: "Employee Handbook 2024",
-      category: "Policies",
-      lastModified: "2024-02-15",
-      status: "published",
-      size: "2.5 MB",
-    },
-    {
-      id: "2",
-      title: "Onboarding Checklist",
-      category: "Templates",
-      lastModified: "2024-02-10",
-      status: "published",
-      size: "1.2 MB",
-    },
-    {
-      id: "3",
-      title: "Performance Review Template",
-      category: "Templates",
-      lastModified: "2024-02-08",
-      status: "draft",
-      size: "890 KB",
-    },
-  ]);
-
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
-  const handleDownload = (document: Document) => {
-    toast({
-      title: "Download Started",
-      description: `Downloading ${document.title}...`,
-    });
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch documents",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDocuments(data || []);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    const allowedTypes = ['doc', 'docx', 'pdf', 'jpg', 'jpeg', 'png'];
+    
+    if (!fileExt || !allowedTypes.includes(fileExt)) {
+      toast({
+        title: "Error",
+        description: "Invalid file type. Only Word documents, PDFs, and images are allowed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to upload documents",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', file.name);
+    formData.append('userId', user.id);
+
+    try {
+      const response = await fetch('https://pnuqluofutrzeigqtdju.supabase.co/functions/v1/handle-document-upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully",
+      });
+
+      fetchDocuments();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload document",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDownload = async (document: Document) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(document.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.title;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: `Downloaded ${document.title}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredDocuments = documents.filter(doc =>
+    doc.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -66,11 +169,32 @@ const Documents = () => {
             <h1 className="text-3xl font-bold">Document Management</h1>
             <p className="text-gray-600 mt-1">Manage and organize company documents</p>
           </div>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Upload Document
-          </Button>
+          <div className="flex items-center gap-4">
+            <Input
+              type="file"
+              className="hidden"
+              id="file-upload"
+              onChange={handleFileUpload}
+              accept=".doc,.docx,.pdf,.jpg,.jpeg,.png"
+            />
+            <label htmlFor="file-upload">
+              <Button as="span">
+                <Plus className="w-4 h-4 mr-2" />
+                Upload Document
+              </Button>
+            </label>
+          </div>
         </div>
+
+        {uploading && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Uploading...</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <Progress value={uploadProgress} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="p-6 bg-blue-50">
@@ -81,17 +205,17 @@ const Documents = () => {
           
           <Card className="p-6 bg-green-50">
             <FileCheck className="w-8 h-8 text-green-600 mb-2" />
-            <h3 className="font-semibold">Published</h3>
+            <h3 className="font-semibold">Word Documents</h3>
             <p className="text-2xl font-bold mt-2">
-              {documents.filter(d => d.status === "published").length}
+              {documents.filter(d => ['doc', 'docx'].includes(d.file_type)).length}
             </p>
           </Card>
           
           <Card className="p-6 bg-orange-50">
             <File className="w-8 h-8 text-orange-600 mb-2" />
-            <h3 className="font-semibold">Drafts</h3>
+            <h3 className="font-semibold">Other Files</h3>
             <p className="text-2xl font-bold mt-2">
-              {documents.filter(d => d.status === "draft").length}
+              {documents.filter(d => !['doc', 'docx'].includes(d.file_type)).length}
             </p>
           </Card>
         </div>
@@ -100,17 +224,19 @@ const Documents = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Recent Documents</h2>
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
                 type="text"
                 placeholder="Search documents..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
 
           <div className="space-y-4">
-            {documents.map((doc) => (
+            {filteredDocuments.map((doc) => (
               <div
                 key={doc.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/20 transition-colors"
@@ -120,12 +246,21 @@ const Documents = () => {
                   <div>
                     <h3 className="font-medium">{doc.title}</h3>
                     <p className="text-sm text-gray-500">
-                      {doc.category} • Last modified: {doc.lastModified}
+                      {doc.file_type.toUpperCase()} • {formatFileSize(doc.size)} • 
+                      Last modified: {new Date(doc.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-500">{doc.size}</span>
+                  {['doc', 'docx'].includes(doc.file_type) ? (
+                    <Button variant="ghost" size="icon">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="icon">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
