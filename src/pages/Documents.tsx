@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
+import { useSessionContext } from "@supabase/auth-helpers-react";
 
 interface Document {
   id: string;
@@ -33,6 +34,7 @@ const Documents = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
+  const { session } = useSessionContext();
 
   useEffect(() => {
     fetchDocuments();
@@ -40,15 +42,18 @@ const Documents = () => {
 
   const fetchDocuments = async () => {
     try {
+      console.log("Fetching documents...");
       const { data, error } = await supabase
         .from('documents')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error('Error fetching documents:', error);
         throw error;
       }
 
+      console.log("Fetched documents:", data);
       setDocuments(data || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -62,7 +67,7 @@ const Documents = () => {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !session?.user) return;
 
     const fileExt = file.name.split('.').pop()?.toLowerCase();
     const allowedTypes = ['doc', 'docx', 'pdf', 'jpg', 'jpeg', 'png'];
@@ -80,34 +85,35 @@ const Documents = () => {
     setUploadProgress(0);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+      // Generate a unique file path
+      const filePath = `${session.user.id}/${crypto.randomUUID()}.${fileExt}`;
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('title', file.name);
-      formData.append('userId', user.id);
+      // Upload file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
 
-      const response = await fetch('https://pnuqluofutrzeigqtdju.supabase.co/functions/v1/handle-document-upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-      });
+      if (uploadError) throw uploadError;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
+      // Save document metadata to the database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          title: file.name,
+          file_path: filePath,
+          file_type: fileExt,
+          size: file.size,
+          created_by: session.user.id
+        });
+
+      if (dbError) throw dbError;
 
       toast({
         title: "Success",
         description: "Document uploaded successfully",
       });
 
+      // Refresh the documents list
       await fetchDocuments();
     } catch (error) {
       console.error('Upload error:', error);
@@ -147,6 +153,7 @@ const Documents = () => {
         description: `Downloaded ${document.title}`,
       });
     } catch (error) {
+      console.error('Download error:', error);
       toast({
         title: "Error",
         description: "Failed to download document",
