@@ -39,21 +39,25 @@ const Documents = () => {
   }, []);
 
   const fetchDocuments = async () => {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (error) {
+        throw error;
+      }
+
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
       toast({
         title: "Error",
         description: "Failed to fetch documents",
         variant: "destructive",
       });
-      return;
     }
-
-    setDocuments(data || []);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,32 +79,28 @@ const Documents = () => {
     setUploading(true);
     setUploadProgress(0);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to upload documents",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', file.name);
-    formData.append('userId', user.id);
-
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', file.name);
+      formData.append('userId', user.id);
+
       const response = await fetch('https://pnuqluofutrzeigqtdju.supabase.co/functions/v1/handle-document-upload', {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
 
       toast({
@@ -108,16 +108,22 @@ const Documents = () => {
         description: "Document uploaded successfully",
       });
 
-      fetchDocuments();
+      await fetchDocuments();
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Error",
-        description: "Failed to upload document",
+        description: error instanceof Error ? error.message : "Failed to upload document",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
       setUploadProgress(0);
+      // Reset the file input
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
     }
   };
 
