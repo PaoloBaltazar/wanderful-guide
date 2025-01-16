@@ -45,31 +45,84 @@ export const checkTaskDeadlines = async (tasks: Task[]) => {
 
 export const handleTaskStatusChange = async (task: Task) => {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
     let notificationType = "";
     let message = "";
 
     switch (task.status) {
       case "completed":
         notificationType = "completed";
-        message = `Task "${task.title}" has been completed`;
+        message = `Task "${task.title}" has been completed by ${userData.user.email}`;
         break;
       case "in-progress":
         notificationType = "status";
-        message = `Task "${task.title}" is now in progress`;
+        message = `Task "${task.title}" is now in progress, updated by ${userData.user.email}`;
         break;
       default:
         return; // Don't create notification for pending status
     }
 
-    await createNotification({
-      title: "Task Status Update",
-      message,
-      type: notificationType,
-      task_id: task.id,
-      user_id: task.user_id,
-    });
+    // Create notification for the task assignee
+    if (task.assigned_to !== userData.user.email) {
+      await createNotification({
+        title: "Task Status Update",
+        message,
+        type: notificationType,
+        task_id: task.id,
+        user_id: task.user_id,
+      });
+    }
+
+    // Create notification for task creator if different from assignee and current user
+    if (task.created_by !== userData.user.email && task.created_by !== task.assigned_to) {
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', task.created_by)
+        .single();
+
+      if (creatorProfile) {
+        await createNotification({
+          title: "Task Status Update",
+          message,
+          type: notificationType,
+          task_id: task.id,
+          user_id: creatorProfile.id,
+        });
+      }
+    }
   } catch (error) {
     console.error("Error handling task status change:", error);
+    throw error;
+  }
+};
+
+export const handleTaskAssignment = async (task: Task) => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    // Get the assignee's profile to get their ID
+    const { data: assigneeProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', task.assigned_to)
+      .single();
+
+    if (assigneeProfile) {
+      // Create notification for the assignee
+      await createNotification({
+        title: "New Task Assignment",
+        message: `You have been assigned to task "${task.title}" by ${task.created_by}`,
+        type: "assignment",
+        task_id: task.id,
+        user_id: assigneeProfile.id,
+      });
+    }
+  } catch (error) {
+    console.error("Error handling task assignment:", error);
     throw error;
   }
 };

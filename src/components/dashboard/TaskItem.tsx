@@ -56,6 +56,24 @@ export const TaskItem = ({ task, showAssignment = true, onStatusChange, onTasksC
       const updatedTask = { ...task, status: nextStatus };
       await handleTaskStatusChange(updatedTask);
       
+      // Create notification for task status change
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert([
+            {
+              user_id: task.assigned_to === userData.user.email ? userData.user.id : task.user_id,
+              title: "Task Status Updated",
+              message: `Task "${task.title}" status changed to ${nextStatus} by ${userData.user.email}`,
+              type: "status",
+              task_id: task.id
+            }
+          ]);
+
+        if (notificationError) throw notificationError;
+      }
+      
       onStatusChange(task.id, nextStatus);
       toast({
         title: "Success",
