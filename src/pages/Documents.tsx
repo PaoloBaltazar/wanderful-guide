@@ -130,7 +130,7 @@ const Documents = () => {
       if (error) throw error;
 
       const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
+      const a = window.document.createElement('a');
       a.href = url;
       a.download = document.title;
       a.click();
@@ -178,9 +178,11 @@ const Documents = () => {
               accept=".doc,.docx,.pdf,.jpg,.jpeg,.png"
             />
             <label htmlFor="file-upload">
-              <Button as="span">
-                <Plus className="w-4 h-4 mr-2" />
-                Upload Document
+              <Button asChild>
+                <span>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Upload Document
+                </span>
               </Button>
             </label>
           </div>
