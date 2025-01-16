@@ -28,16 +28,25 @@ export const checkTaskDeadlines = async (tasks: Task[]) => {
     const daysDiff = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     if (daysDiff <= 2 && task.status !== "completed") {
-      try {
-        await createNotification({
-          title: "Task Deadline Approaching",
-          message: `Task "${task.title}" is due in ${daysDiff} days`,
-          type: "deadline",
-          task_id: task.id,
-          user_id: task.user_id,
-        });
-      } catch (error) {
-        console.error("Error checking task deadlines:", error);
+      // Get the assignee's profile to get their ID
+      const { data: assigneeProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', task.assigned_to)
+        .single();
+
+      if (assigneeProfile) {
+        try {
+          await createNotification({
+            title: "Task Deadline Approaching",
+            message: `Task "${task.title}" is due in ${daysDiff} days`,
+            type: "deadline",
+            task_id: task.id,
+            user_id: assigneeProfile.id,
+          });
+        } catch (error) {
+          console.error("Error checking task deadlines:", error);
+        }
       }
     }
   }
@@ -64,18 +73,25 @@ export const handleTaskStatusChange = async (task: Task) => {
         return; // Don't create notification for pending status
     }
 
-    // Create notification for the task assignee
-    if (task.assigned_to !== userData.user.email) {
+    // Get assignee's profile
+    const { data: assigneeProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', task.assigned_to)
+      .single();
+
+    // Create notification for the task assignee if they're not the one updating
+    if (assigneeProfile && task.assigned_to !== userData.user.email) {
       await createNotification({
         title: "Task Status Update",
         message,
         type: notificationType,
         task_id: task.id,
-        user_id: task.user_id,
+        user_id: assigneeProfile.id,
       });
     }
 
-    // Create notification for task creator if different from assignee and current user
+    // Get creator's profile and create notification if they're different from assignee and current user
     if (task.created_by !== userData.user.email && task.created_by !== task.assigned_to) {
       const { data: creatorProfile } = await supabase
         .from('profiles')
