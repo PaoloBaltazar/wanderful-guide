@@ -1,18 +1,24 @@
-import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/types/task";
+import { supabase } from "@/lib/supabase";
 import { handleTaskStatusChange } from "@/utils/notificationUtils";
 
 interface TaskItemProps {
   task: Task;
-  onStatusChange: (taskId: string, newStatus: string) => void;
+  showAssignment?: boolean;
+  onStatusChange?: (taskId: string, newStatus: Task["status"]) => void;
+  onTasksChange: () => void;
 }
 
-const TaskItem = ({ task, onStatusChange }: TaskItemProps) => {
+export const TaskItem = ({ 
+  task, 
+  showAssignment = true,
+  onStatusChange,
+  onTasksChange 
+}: TaskItemProps) => {
   const { toast } = useToast();
 
-  const getNextStatus = (currentStatus: string) => {
+  const getNextStatus = (currentStatus: Task["status"]): Task["status"] => {
     switch (currentStatus) {
       case "pending":
         return "in-progress";
@@ -21,7 +27,7 @@ const TaskItem = ({ task, onStatusChange }: TaskItemProps) => {
       case "completed":
         return "pending";
       default:
-        return currentStatus;
+        return "pending";
     }
   };
 
@@ -39,7 +45,11 @@ const TaskItem = ({ task, onStatusChange }: TaskItemProps) => {
       const updatedTask = { ...task, status: nextStatus };
       await handleTaskStatusChange(updatedTask);
       
-      onStatusChange(task.id, nextStatus);
+      if (onStatusChange) {
+        onStatusChange(task.id, nextStatus);
+      }
+      onTasksChange();
+      
       toast({
         title: "Success",
         description: "Task status updated successfully",
@@ -55,13 +65,27 @@ const TaskItem = ({ task, onStatusChange }: TaskItemProps) => {
   };
 
   return (
-    <div className="task-item">
-      <h3>{task.title}</h3>
-      <button onClick={handleStatusClick}>
-        {task.status}
+    <div className="flex items-center justify-between p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+      <div className="flex-1">
+        <h3 className="font-medium text-gray-900 dark:text-gray-100">{task.title}</h3>
+        {showAssignment && (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Assigned to: {task.assigned_to}
+          </p>
+        )}
+      </div>
+      <button
+        onClick={handleStatusClick}
+        className={`px-3 py-1 rounded-full text-sm font-medium ${
+          task.status === "completed"
+            ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+            : task.status === "in-progress"
+            ? "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+        }`}
+      >
+        {task.status.replace("-", " ")}
       </button>
     </div>
   );
 };
-
-export default TaskItem;
