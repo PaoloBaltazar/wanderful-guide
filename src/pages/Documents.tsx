@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Plus, 
   FileText, 
@@ -11,9 +11,7 @@ import {
   File, 
   FileCheck,
   Search,
-  Edit,
-  Eye,
-  ExternalLink
+  Eye
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -37,14 +35,8 @@ const Documents = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editedContent, setEditedContent] = useState("");
   const { toast } = useToast();
   const { session } = useSessionContext();
-
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
 
   const fetchDocuments = async () => {
     try {
@@ -191,39 +183,6 @@ const Documents = () => {
     }
   };
 
-  const handleEdit = async (document: Document) => {
-    try {
-      if (!['doc', 'docx'].includes(document.file_type)) {
-        toast({
-          title: "Error",
-          description: "Only Word documents can be edited",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(document.file_path, 3600);
-
-      if (error) throw error;
-
-      // Open in Office Online Editor
-      const officeOnlineUrl = `https://word-edit.officeapps.live.com/we/wordeditorframe.aspx?ui=en%2DUS&rs=en%2DUS&wopisrc=${encodeURIComponent(data.signedUrl)}`;
-      
-      setSelectedDocument(document);
-      setIsEditOpen(true);
-      setEditedContent("To edit this document:");
-    } catch (error) {
-      console.error('Edit error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to edit document",
-        variant: "destructive",
-      });
-    }
-  };
-
   const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -329,23 +288,13 @@ const Documents = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  {['doc', 'docx'].includes(doc.file_type) ? (
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleEdit(doc)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleView(doc)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleView(doc)}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -374,34 +323,6 @@ const Documents = () => {
               />
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Document: {selectedDocument?.title}</DialogTitle>
-            <DialogDescription>
-              This document can be edited using Microsoft Office Online.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 space-y-4">
-            <p className="text-gray-600">
-              To edit this document, click the button below to open it in Microsoft Office Online:
-            </p>
-            {selectedDocument && (
-              <Button 
-                className="w-full"
-                onClick={() => handleView(selectedDocument)}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Open in Office Online
-              </Button>
-            )}
-            <p className="text-sm text-gray-500">
-              Note: You'll need a Microsoft account to edit the document. Any changes will need to be saved and re-uploaded.
-            </p>
-          </div>
         </DialogContent>
       </Dialog>
     </Layout>
