@@ -73,7 +73,7 @@ const Notifications = () => {
       const { error } = await supabase
         .from('notifications')
         .delete()
-        .neq('id', ''); // Delete all notifications for the current user (RLS policy will handle user filtering)
+        .is('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
       
       if (error) throw error;
     },
