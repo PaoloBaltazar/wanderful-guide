@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { 
   Plus, 
   FileText, 
@@ -13,7 +13,7 @@ import {
   Search,
   Edit,
   Eye,
-  Save
+  ExternalLink
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -165,19 +165,19 @@ const Documents = () => {
 
   const handleView = async (document: Document) => {
     try {
-      if (['doc', 'docx', 'pdf'].includes(document.file_type)) {
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(document.file_path, 60);
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(document.file_path, 3600);
 
-        if (error) throw error;
+      if (error) throw error;
+
+      if (['doc', 'docx'].includes(document.file_type)) {
+        // Open in Office Online Viewer
+        const officeOnlineUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(data.signedUrl)}`;
+        window.open(officeOnlineUrl, '_blank');
+      } else if (['pdf'].includes(document.file_type)) {
         window.open(data.signedUrl, '_blank');
       } else if (['jpg', 'jpeg', 'png'].includes(document.file_type)) {
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(document.file_path, 3600);
-
-        if (error) throw error;
         setSelectedDocument({ ...document, content: data.signedUrl });
         setIsViewOpen(true);
       }
@@ -192,19 +192,28 @@ const Documents = () => {
   };
 
   const handleEdit = async (document: Document) => {
-    if (!['doc', 'docx'].includes(document.file_type)) {
-      toast({
-        title: "Error",
-        description: "Only Word documents can be edited",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
+      if (!['doc', 'docx'].includes(document.file_type)) {
+        toast({
+          title: "Error",
+          description: "Only Word documents can be edited",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(document.file_path, 3600);
+
+      if (error) throw error;
+
+      // Open in Office Online Editor
+      const officeOnlineUrl = `https://word-edit.officeapps.live.com/we/wordeditorframe.aspx?ui=en%2DUS&rs=en%2DUS&wopisrc=${encodeURIComponent(data.signedUrl)}`;
+      
       setSelectedDocument(document);
       setIsEditOpen(true);
-      setEditedContent("Document editing is not implemented in this demo.");
+      setEditedContent("To edit this document:");
     } catch (error) {
       console.error('Edit error:', error);
       toast({
@@ -372,9 +381,26 @@ const Documents = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Document: {selectedDocument?.title}</DialogTitle>
+            <DialogDescription>
+              This document can be edited using Microsoft Office Online.
+            </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            <p className="text-gray-600">{editedContent}</p>
+          <div className="mt-4 space-y-4">
+            <p className="text-gray-600">
+              To edit this document, click the button below to open it in Microsoft Office Online:
+            </p>
+            {selectedDocument && (
+              <Button 
+                className="w-full"
+                onClick={() => handleView(selectedDocument)}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open in Office Online
+              </Button>
+            )}
+            <p className="text-sm text-gray-500">
+              Note: You'll need a Microsoft account to edit the document. Any changes will need to be saved and re-uploaded.
+            </p>
           </div>
         </DialogContent>
       </Dialog>
