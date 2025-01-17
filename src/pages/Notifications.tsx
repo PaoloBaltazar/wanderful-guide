@@ -70,10 +70,13 @@ const Notifications = () => {
 
   const deleteAllNotificationsMutation = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+      
       const { error } = await supabase
         .from('notifications')
         .delete()
-        .is('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
+        .eq('user_id', user.id);
       
       if (error) throw error;
     },
