@@ -45,6 +45,33 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_performance: {
+        Row: {
+          employee_id: string | null
+          id: string
+          metric_name: string
+          metric_value: number
+          notes: string | null
+          recorded_at: string | null
+        }
+        Insert: {
+          employee_id?: string | null
+          id?: string
+          metric_name: string
+          metric_value: number
+          notes?: string | null
+          recorded_at?: string | null
+        }
+        Update: {
+          employee_id?: string | null
+          id?: string
+          metric_name?: string
+          metric_value?: number
+          notes?: string | null
+          recorded_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
