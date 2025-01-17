@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Plus, 
   FileText, 
@@ -11,7 +12,8 @@ import {
   FileCheck,
   Search,
   Edit,
-  Eye
+  Eye,
+  Save
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +35,10 @@ const Documents = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editedContent, setEditedContent] = useState("");
   const { toast } = useToast();
   const { session } = useSessionContext();
 
@@ -85,17 +91,14 @@ const Documents = () => {
     setUploadProgress(0);
 
     try {
-      // Generate a unique file path
       const filePath = `${session.user.id}/${crypto.randomUUID()}.${fileExt}`;
 
-      // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Save document metadata to the database
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
@@ -113,7 +116,6 @@ const Documents = () => {
         description: "Document uploaded successfully",
       });
 
-      // Refresh the documents list
       await fetchDocuments();
     } catch (error) {
       console.error('Upload error:', error);
@@ -125,7 +127,6 @@ const Documents = () => {
     } finally {
       setUploading(false);
       setUploadProgress(0);
-      // Reset the file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
@@ -157,6 +158,58 @@ const Documents = () => {
       toast({
         title: "Error",
         description: "Failed to download document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleView = async (document: Document) => {
+    try {
+      if (['doc', 'docx', 'pdf'].includes(document.file_type)) {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(document.file_path, 60);
+
+        if (error) throw error;
+        window.open(data.signedUrl, '_blank');
+      } else if (['jpg', 'jpeg', 'png'].includes(document.file_type)) {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(document.file_path, 3600);
+
+        if (error) throw error;
+        setSelectedDocument({ ...document, content: data.signedUrl });
+        setIsViewOpen(true);
+      }
+    } catch (error) {
+      console.error('View error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to view document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEdit = async (document: Document) => {
+    if (!['doc', 'docx'].includes(document.file_type)) {
+      toast({
+        title: "Error",
+        description: "Only Word documents can be edited",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSelectedDocument(document);
+      setIsEditOpen(true);
+      setEditedContent("Document editing is not implemented in this demo.");
+    } catch (error) {
+      console.error('Edit error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to edit document",
         variant: "destructive",
       });
     }
@@ -268,11 +321,19 @@ const Documents = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   {['doc', 'docx'].includes(doc.file_type) ? (
-                    <Button variant="ghost" size="icon">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleEdit(doc)}
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
                   ) : (
-                    <Button variant="ghost" size="icon">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleView(doc)}
+                    >
                       <Eye className="w-4 h-4" />
                     </Button>
                   )}
@@ -289,6 +350,34 @@ const Documents = () => {
           </div>
         </Card>
       </div>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{selectedDocument?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedDocument?.content && (
+            <div className="mt-4">
+              <img 
+                src={selectedDocument.content} 
+                alt={selectedDocument.title}
+                className="max-w-full h-auto rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Document: {selectedDocument?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-gray-600">{editedContent}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
