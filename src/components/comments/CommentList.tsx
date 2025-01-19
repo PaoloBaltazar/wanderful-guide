@@ -35,7 +35,7 @@ export const CommentList = ({ taskId }: CommentListProps) => {
       .from("comments")
       .select(`
         *,
-        user:profiles!comments_user_id_fkey (
+        user:profiles(
           email,
           full_name,
           avatar_url
