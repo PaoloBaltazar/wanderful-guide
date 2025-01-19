@@ -70,7 +70,15 @@ export type Database = {
           notes?: string | null
           recorded_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employee_performance_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
