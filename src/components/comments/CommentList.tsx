@@ -38,8 +38,8 @@ export const CommentList = ({ taskId }: CommentListProps) => {
   const [mentionSearch, setMentionSearch] = useState("");
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState<Profile[]>([]);
-  const [cursorPosition, setCursorPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mentionsRef = useRef<HTMLDivElement>(null);
   const { session } = useSessionContext();
   const { toast } = useToast();
   const debouncedMentionSearch = useDebounce(mentionSearch, 300);
@@ -131,29 +131,10 @@ export const CommentList = ({ taskId }: CommentListProps) => {
     if (mentionMatch) {
       setMentionSearch(mentionMatch[1]);
       setShowMentionSuggestions(true);
-
-      // Calculate dropdown position
-      if (textareaRef.current) {
-        const { top, left } = getCaretCoordinates();
-        setCursorPosition({ top, left });
-      }
     } else {
       setShowMentionSuggestions(false);
       setMentionSearch("");
     }
-  };
-
-  const getCaretCoordinates = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return { top: 0, left: 0 };
-
-    const { offsetHeight: textareaHeight, scrollTop } = textarea;
-    const { top: textareaTop, left: textareaLeft } = textarea.getBoundingClientRect();
-    
-    return {
-      top: textareaTop + textareaHeight + 5,
-      left: textareaLeft + 10,
-    };
   };
 
   const insertMention = (profile: Profile) => {
@@ -225,8 +206,12 @@ export const CommentList = ({ taskId }: CommentListProps) => {
 
           {showMentionSuggestions && mentionSuggestions.length > 0 && (
             <div 
-              className="absolute z-10 w-64 max-h-48 overflow-y-auto bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700"
-              style={{ top: cursorPosition.top, left: cursorPosition.left }}
+              ref={mentionsRef}
+              className="absolute z-50 w-64 max-h-48 overflow-y-auto bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700"
+              style={{ 
+                top: textareaRef.current ? textareaRef.current.offsetTop + textareaRef.current.offsetHeight + 4 : 0,
+                left: textareaRef.current ? textareaRef.current.offsetLeft : 0
+              }}
             >
               {mentionSuggestions.map((profile) => (
                 <button
