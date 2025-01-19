@@ -16,7 +16,7 @@ interface Comment {
   user: {
     email: string;
     full_name: string;
-    avatar_url: string;
+    avatar_url: string | null;
   };
 }
 
@@ -35,7 +35,7 @@ export const CommentList = ({ taskId }: CommentListProps) => {
       .from("comments")
       .select(`
         *,
-        user:user_id (
+        user:profiles!comments_user_id_fkey (
           email,
           full_name,
           avatar_url
