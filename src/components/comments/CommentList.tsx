@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSessionContext } from "@supabase/auth-helpers-react";
 import { supabase } from "@/lib/supabase";
 import { MessageSquare, Send, User } from "lucide-react";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar } from "@/components/ui/avatar";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface Comment {
   id: string;
@@ -20,6 +21,13 @@ interface Comment {
   };
 }
 
+interface Profile {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
 interface CommentListProps {
   taskId: string;
 }
@@ -27,8 +35,14 @@ interface CommentListProps {
 export const CommentList = ({ taskId }: CommentListProps) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [mentionSuggestions, setMentionSuggestions] = useState<Profile[]>([]);
+  const [cursorPosition, setCursorPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { session } = useSessionContext();
   const { toast } = useToast();
+  const debouncedMentionSearch = useDebounce(mentionSearch, 300);
 
   const fetchComments = async () => {
     const { data, error } = await supabase
@@ -56,10 +70,29 @@ export const CommentList = ({ taskId }: CommentListProps) => {
     setComments(data as Comment[]);
   };
 
+  const fetchMentionSuggestions = async (search: string) => {
+    if (!search) {
+      setMentionSuggestions([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, avatar_url")
+      .ilike("full_name", `${search}%`)
+      .order("full_name");
+
+    if (error) {
+      console.error("Error fetching mention suggestions:", error);
+      return;
+    }
+
+    setMentionSuggestions(data);
+  };
+
   useEffect(() => {
     fetchComments();
 
-    // Subscribe to real-time updates
     const channel = supabase
       .channel("comments_changes")
       .on(
@@ -81,10 +114,69 @@ export const CommentList = ({ taskId }: CommentListProps) => {
     };
   }, [taskId]);
 
+  useEffect(() => {
+    if (debouncedMentionSearch) {
+      fetchMentionSuggestions(debouncedMentionSearch);
+    }
+  }, [debouncedMentionSearch]);
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewComment(value);
+
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      setMentionSearch(mentionMatch[1]);
+      setShowMentionSuggestions(true);
+
+      // Calculate dropdown position
+      if (textareaRef.current) {
+        const { top, left } = getCaretCoordinates();
+        setCursorPosition({ top, left });
+      }
+    } else {
+      setShowMentionSuggestions(false);
+      setMentionSearch("");
+    }
+  };
+
+  const getCaretCoordinates = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return { top: 0, left: 0 };
+
+    const { offsetHeight: textareaHeight, scrollTop } = textarea;
+    const { top: textareaTop, left: textareaLeft } = textarea.getBoundingClientRect();
+    
+    return {
+      top: textareaTop + textareaHeight + 5,
+      left: textareaLeft + 10,
+    };
+  };
+
+  const insertMention = (profile: Profile) => {
+    const cursorPos = textareaRef.current?.selectionStart || 0;
+    const textBeforeCursor = newComment.slice(0, cursorPos);
+    const textAfterCursor = newComment.slice(cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      const newText = textBeforeCursor.slice(0, -mentionMatch[0].length) + 
+        `@${profile.email} ` + 
+        textAfterCursor;
+      setNewComment(newText);
+    }
+
+    setShowMentionSuggestions(false);
+    setMentionSearch("");
+    textareaRef.current?.focus();
+  };
+
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !session?.user) return;
 
-    // Extract mentions from comment
     const mentionRegex = /@([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
     const mentions = [...newComment.matchAll(mentionRegex)].map(match => match[1]);
 
@@ -119,16 +211,41 @@ export const CommentList = ({ taskId }: CommentListProps) => {
       </div>
 
       <div className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative">
           <Textarea
+            ref={textareaRef}
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
+            onChange={handleTextareaChange}
             placeholder="Write a comment... Use @ to mention someone"
             className="min-h-[80px]"
           />
           <Button onClick={handleSubmitComment} size="icon">
             <Send className="w-4 h-4" />
           </Button>
+
+          {showMentionSuggestions && mentionSuggestions.length > 0 && (
+            <div 
+              className="absolute z-10 w-64 max-h-48 overflow-y-auto bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700"
+              style={{ top: cursorPosition.top, left: cursorPosition.left }}
+            >
+              {mentionSuggestions.map((profile) => (
+                <button
+                  key={profile.id}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  onClick={() => insertMention(profile)}
+                >
+                  <Avatar className="w-6 h-6">
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt={profile.full_name} />
+                    ) : (
+                      <User className="w-4 h-4" />
+                    )}
+                  </Avatar>
+                  <span className="text-sm">{profile.full_name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
