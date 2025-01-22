@@ -188,14 +188,21 @@ const Documents = () => {
     }
   };
 
-  const handleDelete = async (document: Document) => {
+  const handleDelete = async (e: React.MouseEvent, document: Document) => {
+    e.stopPropagation(); // Prevent event bubbling
+    
     try {
+      console.log('Deleting document:', document);
+      
       // First delete the file from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
         .remove([document.file_path]);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.error('Storage delete error:', storageError);
+        throw storageError;
+      }
 
       // Then delete the document record from the database
       const { error: dbError } = await supabase
@@ -203,7 +210,10 @@ const Documents = () => {
         .delete()
         .eq('id', document.id);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database delete error:', dbError);
+        throw dbError;
+      }
 
       toast({
         title: "Success",
@@ -344,7 +354,7 @@ const Documents = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(doc)}
+                    onClick={(e) => handleDelete(e, doc)}
                     className="text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
