@@ -11,7 +11,8 @@ import {
   File, 
   FileCheck,
   Search,
-  Eye
+  Eye,
+  Trash2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,10 +39,9 @@ const Documents = () => {
   const { toast } = useToast();
   const { session } = useSessionContext();
 
-  // Add useEffect to fetch documents when component mounts
   useEffect(() => {
     fetchDocuments();
-  }, []); // Empty dependency array means this runs once when component mounts
+  }, []);
 
   const fetchDocuments = async () => {
     try {
@@ -188,6 +188,40 @@ const Documents = () => {
     }
   };
 
+  const handleDelete = async (document: Document) => {
+    try {
+      // First delete the file from storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Then delete the document record from the database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', document.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+
+      // Refresh the documents list
+      await fetchDocuments();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -306,6 +340,14 @@ const Documents = () => {
                     onClick={() => handleDownload(doc)}
                   >
                     <Download className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(doc)}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
