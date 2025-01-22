@@ -192,11 +192,29 @@ const Documents = () => {
   const handleDelete = async (e: React.MouseEvent, document: Document) => {
     e.stopPropagation();
     
+    if (!session?.user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to delete documents",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       console.log('Attempting to delete document:', document);
-      console.log('Current user:', session?.user?.id);
+      console.log('Current user:', session.user.id);
       console.log('Document created_by:', document.created_by);
       
+      if (document.created_by !== session.user.id) {
+        toast({
+          title: "Error",
+          description: "You can only delete documents that you created",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // First delete the file from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
@@ -217,7 +235,7 @@ const Documents = () => {
         .from('documents')
         .delete()
         .eq('id', document.id)
-        .eq('created_by', session?.user?.id); // Ensure we're only deleting our own documents
+        .eq('created_by', session.user.id);
 
       if (dbError) {
         console.error('Database delete error:', dbError);
