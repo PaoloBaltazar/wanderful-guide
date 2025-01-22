@@ -27,6 +27,7 @@ interface Document {
   size: number;
   created_at: string;
   content: string | null;
+  created_by: string;
 }
 
 const Documents = () => {
@@ -189,10 +190,12 @@ const Documents = () => {
   };
 
   const handleDelete = async (e: React.MouseEvent, document: Document) => {
-    e.stopPropagation(); // Prevent event bubbling
+    e.stopPropagation();
     
     try {
-      console.log('Deleting document:', document);
+      console.log('Attempting to delete document:', document);
+      console.log('Current user:', session?.user?.id);
+      console.log('Document created_by:', document.created_by);
       
       // First delete the file from storage
       const { error: storageError } = await supabase.storage
@@ -201,18 +204,29 @@ const Documents = () => {
 
       if (storageError) {
         console.error('Storage delete error:', storageError);
-        throw storageError;
+        toast({
+          title: "Error",
+          description: `Failed to delete file: ${storageError.message}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       // Then delete the document record from the database
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
-        .eq('id', document.id);
+        .eq('id', document.id)
+        .eq('created_by', session?.user?.id); // Ensure we're only deleting our own documents
 
       if (dbError) {
         console.error('Database delete error:', dbError);
-        throw dbError;
+        toast({
+          title: "Error",
+          description: `Failed to delete document record: ${dbError.message}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       toast({
@@ -226,7 +240,7 @@ const Documents = () => {
       console.error('Delete error:', error);
       toast({
         title: "Error",
-        description: "Failed to delete document",
+        description: error instanceof Error ? error.message : "Failed to delete document",
         variant: "destructive",
       });
     }
