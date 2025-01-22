@@ -38,6 +38,11 @@ const Documents = () => {
   const { toast } = useToast();
   const { session } = useSessionContext();
 
+  // Add useEffect to fetch documents when component mounts
+  useEffect(() => {
+    fetchDocuments();
+  }, []); // Empty dependency array means this runs once when component mounts
+
   const fetchDocuments = async () => {
     try {
       console.log("Fetching documents...");
