@@ -14,6 +14,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface PerformanceMetric {
   id: string;
@@ -33,7 +34,28 @@ interface Profile {
 const Performance = () => {
   const { toast } = useToast();
 
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  // Query for employee profiles
+  const { data: profiles, refetch: refetchProfiles } = useQuery({
+    queryKey: ['employee-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email');
+
+      if (error) {
+        toast({
+          title: "Error fetching profiles",
+          description: error.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+      return data;
+    },
+  });
+
+  // Query for performance metrics
+  const { data: metrics, refetch: refetchMetrics } = useQuery({
     queryKey: ['performance-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -55,30 +77,46 @@ const Performance = () => {
         });
         return [];
       }
-
       return data;
     },
   });
 
-  const { data: profiles } = useQuery({
-    queryKey: ['employee-profiles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email');
+  // Set up real-time subscriptions
+  useEffect(() => {
+    // Subscribe to profiles changes
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          refetchProfiles();
+        }
+      )
+      .subscribe();
 
-      if (error) {
-        toast({
-          title: "Error fetching profiles",
-          description: error.message,
-          variant: "destructive",
-        });
-        return [];
-      }
+    // Subscribe to performance metrics changes
+    const metricsChannel = supabase
+      .channel('metrics-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'employee_performance' },
+        () => {
+          refetchMetrics();
+        }
+      )
+      .subscribe();
 
-      return data;
-    },
-  });
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(metricsChannel);
+    };
+  }, [refetchProfiles, refetchMetrics]);
+
+  // Calculate active employees (employees with at least one performance metric)
+  const activeEmployees = metrics 
+    ? new Set(metrics.map(m => m.employee_id)).size
+    : 0;
 
   // Calculate average performance across all metrics
   const averagePerformance = metrics?.length
@@ -87,133 +125,144 @@ const Performance = () => {
       )
     : 0;
 
-  // Get unique count of employees with metrics
-  const activeEmployees = new Set(metrics?.map(m => m.employee_id)).size;
-
-  // Get the most recent metrics for trending
-  const recentMetrics = metrics
-    ?.sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())
-    .slice(0, 6)
-    .reverse();
-
-  // Calculate performance trend (comparing average of recent vs older metrics)
+  // Calculate performance trend (comparing last month to previous month)
   const calculateTrend = () => {
     if (!metrics?.length) return 0;
+    
     const sortedMetrics = [...metrics].sort((a, b) => 
       new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime()
     );
-    const midPoint = Math.floor(sortedMetrics.length / 2);
-    const recentAvg = sortedMetrics.slice(0, midPoint).reduce((acc, curr) => acc + curr.metric_value, 0) / midPoint;
-    const oldAvg = sortedMetrics.slice(midPoint).reduce((acc, curr) => acc + curr.metric_value, 0) / midPoint;
-    return Math.round(((recentAvg - oldAvg) / oldAvg) * 100);
+    
+    const currentMonth = new Date().getMonth();
+    const currentMonthMetrics = sortedMetrics.filter(
+      m => new Date(m.recorded_at).getMonth() === currentMonth
+    );
+    const lastMonthMetrics = sortedMetrics.filter(
+      m => new Date(m.recorded_at).getMonth() === currentMonth - 1
+    );
+
+    const currentAvg = currentMonthMetrics.reduce((acc, curr) => acc + curr.metric_value, 0) / 
+      (currentMonthMetrics.length || 1);
+    const lastAvg = lastMonthMetrics.reduce((acc, curr) => acc + curr.metric_value, 0) / 
+      (lastMonthMetrics.length || 1);
+
+    return Math.round(((currentAvg - lastAvg) / lastAvg) * 100) || 0;
   };
 
   const trend = calculateTrend();
 
+  // Get recent metrics for the chart
+  const recentMetrics = metrics
+    ?.sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())
+    .slice(0, 6)
+    .reverse()
+    .map(metric => ({
+      ...metric,
+      name: metric.profiles?.full_name || 'Unknown',
+      date: new Date(metric.recorded_at).toLocaleDateString(),
+    }));
+
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Performance Metrics</h1>
           <p className="text-gray-600 mt-1">Track and analyze team performance</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Average Performance"
             value={`${averagePerformance}%`}
-            icon={<BarChartIcon className="w-8 h-8" />}
+            icon={<BarChartIcon className="w-6 h-6" />}
             description="Across all metrics"
           />
           <StatCard
             title="Performance Trend"
             value={`${trend > 0 ? '+' : ''}${trend}%`}
-            icon={<TrendingUp className="w-8 h-8" />}
-            description="Compared to previous period"
+            icon={<TrendingUp className="w-6 h-6" />}
+            description="Month over month"
           />
           <StatCard
             title="Active Employees"
             value={activeEmployees}
-            icon={<Users className="w-8 h-8" />}
+            icon={<Users className="w-6 h-6" />}
             description="With recorded metrics"
           />
           <StatCard
             title="Total Metrics"
             value={metrics?.length || 0}
-            icon={<Target className="w-8 h-8" />}
+            icon={<Target className="w-6 h-6" />}
             description="Performance records"
           />
         </div>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-6">Performance Trends</h2>
-          <div className="h-[400px]">
+        <Card className="p-4">
+          <h2 className="text-xl font-semibold mb-4">Performance Trends</h2>
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={recentMetrics}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="recorded_at" 
-                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                  dataKey="date"
+                  tick={{ fontSize: 12 }}
                 />
-                <YAxis />
-                <Tooltip 
-                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                  formatter={(value, name, props) => [`${value}%`, 'Performance']}
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  domain={[0, 100]}
                 />
-                <Bar dataKey="metric_value" fill="#3b82f6" />
+                <Tooltip />
+                <Bar 
+                  dataKey="metric_value" 
+                  fill="hsl(var(--primary))" 
+                  name="Performance Score"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="p-4">
             <h2 className="text-xl font-semibold mb-4">Top Performers</h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {metrics
                 ?.sort((a, b) => b.metric_value - a.metric_value)
-                .slice(0, 3)
-                .map((metric) => {
-                  const profile = profiles?.find(p => p.id === metric.employee_id);
-                  return (
-                    <div
-                      key={metric.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div>
-                        <h3 className="font-medium">{profile?.full_name || 'Unknown Employee'}</h3>
-                        <p className="text-sm text-gray-500">{metric.metric_name}</p>
-                      </div>
-                      <div className="text-primary font-semibold">{metric.metric_value}%</div>
+                .slice(0, 5)
+                .map((metric) => (
+                  <div
+                    key={metric.id}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-medium">{metric.profiles?.full_name || 'Unknown Employee'}</h3>
+                      <p className="text-sm text-muted-foreground">{metric.metric_name}</p>
                     </div>
-                  );
-                })}
+                    <div className="text-primary font-semibold">{metric.metric_value}%</div>
+                  </div>
+                ))}
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-4">
             <h2 className="text-xl font-semibold mb-4">Recent Updates</h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {metrics
-                ?.sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())
-                .slice(0, 3)
-                .map((metric) => {
-                  const profile = profiles?.find(p => p.id === metric.employee_id);
-                  return (
-                    <div
-                      key={metric.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div>
-                        <h3 className="font-medium">{profile?.full_name || 'Unknown Employee'}</h3>
-                        <p className="text-sm text-gray-500">
-                          {new Date(metric.recorded_at).toLocaleDateString()} - {metric.metric_name}
-                        </p>
-                      </div>
-                      <div className="text-primary font-semibold">{metric.metric_value}%</div>
+                ?.slice(0, 5)
+                .map((metric) => (
+                  <div
+                    key={metric.id}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-medium">{metric.profiles?.full_name || 'Unknown Employee'}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(metric.recorded_at).toLocaleDateString()} - {metric.metric_name}
+                      </p>
                     </div>
-                  );
-                })}
+                    <div className="text-primary font-semibold">{metric.metric_value}%</div>
+                  </div>
+                ))}
             </div>
           </Card>
         </div>
