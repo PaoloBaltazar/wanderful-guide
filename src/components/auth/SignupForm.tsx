@@ -52,31 +52,7 @@ export const SignupForm = () => {
         return;
       }
 
-      // Check if email exists using Edge Function
-      const { data: checkEmailResponse, error: checkEmailError } = await supabase.functions.invoke('check-email', {
-        body: { email: data.email },
-        method: 'POST',
-      });
-
-      if (checkEmailError) {
-        throw new Error('Failed to check email availability');
-      }
-
-      if (checkEmailResponse?.exists) {
-        toast({
-          title: "Email Already Registered",
-          description: "This email address is already registered. Please use a different email or try logging in.",
-          variant: "destructive",
-        });
-        form.setError("email", {
-          type: "manual",
-          message: "This email is already registered"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // If we get here, the email is unique, proceed with signup
+      // Sign up the user
       const { error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -90,12 +66,12 @@ export const SignupForm = () => {
             address: data.address,
             gender: data.gender,
           },
-          emailRedirectTo: `${window.location.origin}/verify`,
+          emailRedirectTo: `${window.location.origin}/success-confirmation`,
         },
       });
 
       if (signUpError) {
-        console.error("Signup error details:", signUpError);
+        console.error("Signup error:", signUpError);
         throw signUpError;
       }
 
@@ -104,7 +80,7 @@ export const SignupForm = () => {
       
     } catch (error: any) {
       console.error("Signup error:", error);
-      const errorMessage = error.message || handleAuthError(error);
+      const errorMessage = handleAuthError(error);
       toast({
         title: "Error",
         description: errorMessage,
