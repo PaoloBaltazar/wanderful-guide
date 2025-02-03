@@ -90,10 +90,12 @@ export const SignupForm = () => {
             address: data.address,
             gender: data.gender,
           },
+          emailRedirectTo: `${window.location.origin}/verify`,
         },
       });
 
       if (signUpError) {
+        console.error("Signup error details:", signUpError);
         throw signUpError;
       }
 
