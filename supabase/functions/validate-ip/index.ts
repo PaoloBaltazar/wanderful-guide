@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
-    // Query allowed_ips table using maybeSingle() instead of single()
+    // Query allowed_ips table
     const { data: allowedIP, error: queryError } = await supabaseClient
       .from('allowed_ips')
       .select('ip_address')
@@ -49,20 +49,18 @@ Deno.serve(async (req) => {
 
     const isAllowed = !!allowedIP
     console.log(`IP check result for ${clientIP}: ${isAllowed ? 'allowed' : 'denied'}`)
-    console.log('Allowed IP data:', allowedIP)
 
     return new Response(
       JSON.stringify({
         allowed: isAllowed,
         message: isAllowed ? 'Access granted' : 'IP address not allowed',
-        ip: clientIP // Include the detected IP in the response for debugging
+        ip: clientIP
       }),
       { 
         headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json'
-        },
-        status: isAllowed ? 200 : 403
+        }
       }
     )
 
