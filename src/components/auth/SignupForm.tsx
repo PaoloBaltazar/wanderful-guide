@@ -82,10 +82,13 @@ export const SignupForm = () => {
         password: data.password,
         options: {
           data: {
+            full_name: data.full_name,
             username: data.username,
             contact_number: data.contact_number,
             position: data.position,
-            full_name: data.full_name,
+            birthdate: data.birthdate,
+            address: data.address,
+            gender: data.gender,
           },
         },
       });
@@ -98,6 +101,7 @@ export const SignupForm = () => {
       navigate("/success-confirmation");
       
     } catch (error: any) {
+      console.error("Signup error:", error);
       const errorMessage = error.message || handleAuthError(error);
       toast({
         title: "Error",

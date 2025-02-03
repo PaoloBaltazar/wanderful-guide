@@ -267,7 +267,7 @@ export type Database = {
           contact_number: string | null
           created_at: string
           email: string
-          encrypted_data: string
+          encrypted_data: string | null
           full_name: string
           gender: string | null
           id: string
@@ -283,7 +283,7 @@ export type Database = {
           contact_number?: string | null
           created_at?: string
           email: string
-          encrypted_data: string
+          encrypted_data?: string | null
           full_name: string
           gender?: string | null
           id: string
@@ -299,7 +299,7 @@ export type Database = {
           contact_number?: string | null
           created_at?: string
           email?: string
-          encrypted_data?: string
+          encrypted_data?: string | null
           full_name?: string
           gender?: string | null
           id?: string
