@@ -17,6 +17,7 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const [emailConfirmationError, setEmailConfirmationError] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -64,19 +65,29 @@ const Login = () => {
         } else if (event === "USER_UPDATED") {
           setEmailConfirmationError(false);
           setUnconfirmedEmail(null);
+          setLoginError(null);
         } else if (event === "SIGNED_OUT") {
           setEmailConfirmationError(false);
           setUnconfirmedEmail(null);
+          setLoginError(null);
         }
       }
     );
 
     // Listen for auth errors
     const handleAuthError = (e: CustomEvent<any>) => {
-      if (e.detail?.error?.message === "Email not confirmed") {
+      const error = e.detail?.error;
+      if (error?.message === "Email not confirmed") {
         setEmailConfirmationError(true);
         const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
         setUnconfirmedEmail(emailInput?.value || null);
+      } else if (error?.message.includes("Invalid login credentials")) {
+        setLoginError("Invalid email or password. Please try again.");
+        toast({
+          title: "Error",
+          description: "Invalid email or password",
+          variant: "destructive",
+        });
       }
     };
 
@@ -150,6 +161,13 @@ const Login = () => {
                       Resend Verification Email
                     </Button>
                   </AlertDescription>
+                </Alert>
+              )}
+
+              {loginError && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{loginError}</AlertDescription>
                 </Alert>
               )}
 
