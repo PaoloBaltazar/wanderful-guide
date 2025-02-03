@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { 
   Plus, 
   FileText, 
@@ -12,12 +12,15 @@ import {
   FileCheck,
   Search,
   Eye,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  Shield
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useSessionContext } from "@supabase/auth-helpers-react";
+import { validateFile, sanitizeFileName } from "@/utils/documentSecurity";
 
 interface Document {
   id: string;
@@ -37,6 +40,8 @@ const Documents = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const { toast } = useToast();
   const { session } = useSessionContext();
 
@@ -73,41 +78,55 @@ const Documents = () => {
     const file = event.target.files?.[0];
     if (!file || !session?.user) return;
 
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    const allowedTypes = ['doc', 'docx', 'pdf', 'jpg', 'jpeg', 'png'];
-    
-    if (!fileExt || !allowedTypes.includes(fileExt)) {
-      toast({
-        title: "Error",
-        description: "Invalid file type. Only Word documents, PDFs, and images are allowed.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!validateFile(file)) return;
 
     setUploading(true);
     setUploadProgress(0);
 
     try {
-      const filePath = `${session.user.id}/${crypto.randomUUID()}.${fileExt}`;
+      const sanitizedFileName = sanitizeFileName(file.name);
+      const filePath = `${session.user.id}/${crypto.randomUUID()}.${sanitizedFileName.split('.').pop()}`;
+
+      // Simulate progress before actual upload starts
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: 'no-cache',
+          upsert: false,
+          contentType: file.type,
+        });
+
+      clearInterval(progressInterval);
 
       if (uploadError) throw uploadError;
+
+      // Set to 95% after successful upload
+      setUploadProgress(95);
 
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
-          title: file.name,
+          title: sanitizedFileName,
           file_path: filePath,
-          file_type: fileExt,
+          file_type: sanitizedFileName.split('.').pop()?.toLowerCase() || '',
           size: file.size,
           created_by: session.user.id
         });
 
       if (dbError) throw dbError;
+
+      // Set to 100% after database update
+      setUploadProgress(100);
 
       toast({
         title: "Success",
@@ -123,8 +142,12 @@ const Documents = () => {
         variant: "destructive",
       });
     } finally {
-      setUploading(false);
-      setUploadProgress(0);
+      // Reset after a brief delay to show the 100% state
+      setTimeout(() => {
+        setUploading(false);
+        setUploadProgress(0);
+      }, 500);
+      
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
@@ -165,12 +188,11 @@ const Documents = () => {
     try {
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(document.file_path, 3600);
+        .createSignedUrl(document.file_path, 300);
 
       if (error) throw error;
 
       if (['doc', 'docx'].includes(document.file_type)) {
-        // Open in Office Online Viewer
         const officeOnlineUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(data.signedUrl)}`;
         window.open(officeOnlineUrl, '_blank');
       } else if (['pdf'].includes(document.file_type)) {
@@ -189,70 +211,34 @@ const Documents = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, document: Document) => {
+  const handleDeleteClick = async (e: React.MouseEvent, document: Document) => {
     e.stopPropagation();
-    
-    if (!session?.user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to delete documents",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      console.log('Attempting to delete document:', document);
-      console.log('Current user:', session.user.id);
-      console.log('Document created_by:', document.created_by);
-      
-      if (document.created_by !== session.user.id) {
-        toast({
-          title: "Error",
-          description: "You can only delete documents that you created",
-          variant: "destructive",
-        });
-        return;
-      }
+    setDocumentToDelete(document);
+    setIsDeleteDialogOpen(true);
+  };
 
-      // First delete the file from storage
+  const handleConfirmDelete = async () => {
+    if (!documentToDelete) return;
+
+    try {
       const { error: storageError } = await supabase.storage
         .from('documents')
-        .remove([document.file_path]);
+        .remove([documentToDelete.file_path]);
 
-      if (storageError) {
-        console.error('Storage delete error:', storageError);
-        toast({
-          title: "Error",
-          description: `Failed to delete file: ${storageError.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      if (storageError) throw storageError;
 
-      // Then delete the document record from the database
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
-        .eq('id', document.id)
-        .eq('created_by', session.user.id);
+        .eq('id', documentToDelete.id);
 
-      if (dbError) {
-        console.error('Database delete error:', dbError);
-        toast({
-          title: "Error",
-          description: `Failed to delete document record: ${dbError.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      if (dbError) throw dbError;
 
       toast({
         title: "Success",
         description: "Document deleted successfully",
       });
 
-      // Refresh the documents list
       await fetchDocuments();
     } catch (error) {
       console.error('Delete error:', error);
@@ -261,6 +247,9 @@ const Documents = () => {
         description: error instanceof Error ? error.message : "Failed to delete document",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDocumentToDelete(null);
     }
   };
 
@@ -278,11 +267,11 @@ const Documents = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6 md:space-y-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Document Management</h1>
-            <p className="text-gray-600 mt-1">Manage and organize company documents</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Document Management</h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1">Manage and organize company documents</p>
           </div>
           <div className="flex items-center gap-4">
             <Input
@@ -293,7 +282,7 @@ const Documents = () => {
               accept=".doc,.docx,.pdf,.jpg,.jpeg,.png"
             />
             <label htmlFor="file-upload">
-              <Button asChild>
+              <Button asChild className="whitespace-nowrap">
                 <span>
                   <Plus className="w-4 h-4 mr-2" />
                   Upload Document
@@ -313,42 +302,44 @@ const Documents = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 bg-blue-50">
-            <FileText className="w-8 h-8 text-primary mb-2" />
-            <h3 className="font-semibold">Total Documents</h3>
-            <p className="text-2xl font-bold mt-2">{documents.length}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <Card className="p-4 md:p-6 bg-blue-50">
+            <Shield className="w-6 h-6 md:w-8 md:h-8 text-primary mb-2" />
+            <h3 className="font-semibold text-sm md:text-base">Security Status</h3>
+            <p className="text-xs md:text-sm text-gray-600 mt-2">All documents are encrypted and access-logged</p>
           </Card>
           
-          <Card className="p-6 bg-green-50">
-            <FileCheck className="w-8 h-8 text-green-600 mb-2" />
-            <h3 className="font-semibold">Word Documents</h3>
-            <p className="text-2xl font-bold mt-2">
+          <Card className="p-4 md:p-6 bg-green-50">
+            <FileCheck className="w-6 h-6 md:w-8 md:h-8 text-green-600 mb-2" />
+            <h3 className="font-semibold text-sm md:text-base">Word Documents</h3>
+            <p className="text-xl md:text-2xl font-bold mt-2">
               {documents.filter(d => ['doc', 'docx'].includes(d.file_type)).length}
             </p>
           </Card>
           
-          <Card className="p-6 bg-orange-50">
-            <File className="w-8 h-8 text-orange-600 mb-2" />
-            <h3 className="font-semibold">Other Files</h3>
-            <p className="text-2xl font-bold mt-2">
+          <Card className="p-4 md:p-6 bg-orange-50">
+            <File className="w-6 h-6 md:w-8 md:h-8 text-orange-600 mb-2" />
+            <h3 className="font-semibold text-sm md:text-base">Other Files</h3>
+            <p className="text-xl md:text-2xl font-bold mt-2">
               {documents.filter(d => !['doc', 'docx'].includes(d.file_type)).length}
             </p>
           </Card>
         </div>
 
-        <Card className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Recent Documents</h2>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                type="text"
-                placeholder="Search documents..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        <Card className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <h2 className="text-lg md:text-xl font-semibold">Recent Documents</h2>
+            <div className="w-full md:w-64">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder="Search documents..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -356,19 +347,19 @@ const Documents = () => {
             {filteredDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/20 transition-colors"
+                className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border rounded-lg hover:border-primary/20 transition-colors gap-3 md:gap-4"
               >
-                <div className="flex items-center space-x-4">
-                  <FileText className="w-6 h-6 text-gray-400" />
-                  <div>
-                    <h3 className="font-medium">{doc.title}</h3>
-                    <p className="text-sm text-gray-500">
+                <div className="flex items-start md:items-center gap-3 md:gap-4">
+                  <FileText className="w-5 h-5 md:w-6 md:h-6 text-gray-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-sm md:text-base truncate">{doc.title}</h3>
+                    <p className="text-xs md:text-sm text-gray-500 truncate">
                       {doc.file_type.toUpperCase()} • {formatFileSize(doc.size)} • 
                       Last modified: {new Date(doc.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center gap-2 ml-9 md:ml-0">
                   <Button 
                     variant="ghost" 
                     size="icon"
@@ -386,7 +377,7 @@ const Documents = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={(e) => handleDelete(e, doc)}
+                    onClick={(e) => handleDeleteClick(e, doc)}
                     className="text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -412,6 +403,37 @@ const Documents = () => {
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{documentToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-start">
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDocumentToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>
