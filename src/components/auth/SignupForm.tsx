@@ -48,11 +48,10 @@ export const SignupForm = () => {
           description: "Please enter the correct security code to create an account.",
           variant: "destructive",
         });
-        setLoading(false);
         return;
       }
 
-      // Sign up with all user data in a single request
+      // Sign up with Supabase
       const { error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -70,6 +69,12 @@ export const SignupForm = () => {
       });
 
       if (signUpError) throw signUpError;
+
+      // Show success message
+      toast({
+        title: "Account created",
+        description: "Please check your email to verify your account.",
+      });
 
       // Navigate to success page
       navigate("/success-confirmation");
