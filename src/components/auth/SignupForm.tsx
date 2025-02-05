@@ -55,6 +55,13 @@ export const SignupForm = () => {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/success-confirmation`,
+          data: {
+            full_name: data.full_name,
+            username: data.username,
+          }
+        }
       });
 
       if (signUpError) {
@@ -69,7 +76,7 @@ export const SignupForm = () => {
       // Create the profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
+        .insert([{
           id: signUpData.user.id,
           full_name: data.full_name,
           email: data.email,
@@ -79,25 +86,13 @@ export const SignupForm = () => {
           birthdate: data.birthdate,
           address: data.address,
           gender: data.gender,
-        });
+        }]);
 
       if (profileError) {
         console.error("Profile creation error:", profileError);
         // Clean up the auth user if profile creation fails
         await supabase.auth.admin.deleteUser(signUpData.user.id);
         throw profileError;
-      }
-
-      // Update user metadata
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          full_name: data.full_name,
-          username: data.username,
-        }
-      });
-
-      if (updateError) {
-        console.error("Error updating user metadata:", updateError);
       }
 
       // Show success message
