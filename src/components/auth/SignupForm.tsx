@@ -51,22 +51,10 @@ export const SignupForm = () => {
         return;
       }
 
-      // First sign up with Supabase auth to get the user ID
+      // Sign up with Supabase auth
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            full_name: data.full_name,
-            username: data.username,
-            contact_number: data.contact_number,
-            position: data.position,
-            birthdate: data.birthdate,
-            address: data.address,
-            gender: data.gender,
-          },
-          emailRedirectTo: `${window.location.origin}/success-confirmation`,
-        },
       });
 
       if (signUpError) {
@@ -78,7 +66,7 @@ export const SignupForm = () => {
         throw new Error("Failed to create user account");
       }
 
-      // Then create the profile with the user ID
+      // Create the profile
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -95,9 +83,21 @@ export const SignupForm = () => {
 
       if (profileError) {
         console.error("Profile creation error:", profileError);
-        // If profile creation fails, we should clean up the auth user
+        // Clean up the auth user if profile creation fails
         await supabase.auth.admin.deleteUser(signUpData.user.id);
         throw profileError;
+      }
+
+      // Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: data.full_name,
+          username: data.username,
+        }
+      });
+
+      if (updateError) {
+        console.error("Error updating user metadata:", updateError);
       }
 
       // Show success message
