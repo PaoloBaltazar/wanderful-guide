@@ -51,33 +51,7 @@ export const SignupForm = () => {
         return;
       }
 
-      // First, try to create the profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            full_name: data.full_name,
-            email: data.email,
-            username: data.username,
-            contact_number: data.contact_number,
-            position: data.position,
-            birthdate: data.birthdate,
-            address: data.address,
-            gender: data.gender,
-          }
-        ])
-        .select()
-        .single();
-
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-        if (profileError.code === '23505') { // unique violation
-          throw new Error("An account with this email already exists.");
-        }
-        throw profileError;
-      }
-
-      // Then sign up with Supabase auth
+      // First sign up with Supabase auth to get the user ID
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -97,12 +71,33 @@ export const SignupForm = () => {
 
       if (signUpError) {
         console.error("Signup error details:", signUpError);
-        // If signup fails, clean up the profile we just created
-        await supabase
-          .from('profiles')
-          .delete()
-          .match({ email: data.email });
         throw signUpError;
+      }
+
+      if (!signUpData.user?.id) {
+        throw new Error("Failed to create user account");
+      }
+
+      // Then create the profile with the user ID
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: signUpData.user.id,
+          full_name: data.full_name,
+          email: data.email,
+          username: data.username,
+          contact_number: data.contact_number,
+          position: data.position,
+          birthdate: data.birthdate,
+          address: data.address,
+          gender: data.gender,
+        });
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        // If profile creation fails, we should clean up the auth user
+        await supabase.auth.admin.deleteUser(signUpData.user.id);
+        throw profileError;
       }
 
       // Show success message
