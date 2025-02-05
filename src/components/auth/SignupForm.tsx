@@ -52,11 +52,17 @@ export const SignupForm = () => {
         return;
       }
 
-      // Sign up the user
-      const { error: signUpError } = await supabase.auth.signUp({
+      // Sign up the user with minimal data first
+      const { error: signUpError, data: signUpData } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        options: {
+      });
+
+      if (signUpError) throw signUpError;
+
+      // If signup successful, update the user's metadata
+      if (signUpData?.user) {
+        const { error: updateError } = await supabase.auth.updateUser({
           data: {
             full_name: data.full_name,
             username: data.username,
@@ -65,17 +71,13 @@ export const SignupForm = () => {
             birthdate: data.birthdate,
             address: data.address,
             gender: data.gender,
-          },
-          emailRedirectTo: `${window.location.origin}/success-confirmation`,
-        },
-      });
+          }
+        });
 
-      if (signUpError) {
-        console.error("Signup error:", signUpError);
-        throw signUpError;
+        if (updateError) throw updateError;
       }
 
-      // If we get here, the signup was successful
+      // Navigate to success page
       navigate("/success-confirmation");
       
     } catch (error: any) {
