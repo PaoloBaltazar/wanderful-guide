@@ -52,7 +52,7 @@ export const SignupForm = () => {
       }
 
       // Sign up with Supabase
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -65,10 +65,43 @@ export const SignupForm = () => {
             address: data.address,
             gender: data.gender,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error("Signup error details:", signUpError);
+        throw signUpError;
+      }
+
+      if (signUpData?.user) {
+        // Create profile entry manually if needed
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: signUpData.user.id,
+              full_name: data.full_name,
+              email: data.email,
+              username: data.username,
+              contact_number: data.contact_number,
+              position: data.position,
+              birthdate: data.birthdate,
+              address: data.address,
+              gender: data.gender,
+            }
+          ]);
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          // Don't throw here, as the user is already created
+          toast({
+            title: "Warning",
+            description: "Account created but profile setup incomplete. Please contact support.",
+            variant: "destructive",
+          });
+        }
+      }
 
       // Show success message
       toast({
