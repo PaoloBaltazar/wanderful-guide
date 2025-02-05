@@ -51,7 +51,33 @@ export const SignupForm = () => {
         return;
       }
 
-      // Sign up with Supabase
+      // First, try to create the profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            full_name: data.full_name,
+            email: data.email,
+            username: data.username,
+            contact_number: data.contact_number,
+            position: data.position,
+            birthdate: data.birthdate,
+            address: data.address,
+            gender: data.gender,
+          }
+        ])
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        if (profileError.code === '23505') { // unique violation
+          throw new Error("An account with this email already exists.");
+        }
+        throw profileError;
+      }
+
+      // Then sign up with Supabase auth
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -65,42 +91,18 @@ export const SignupForm = () => {
             address: data.address,
             gender: data.gender,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/success-confirmation`,
         },
       });
 
       if (signUpError) {
         console.error("Signup error details:", signUpError);
-        throw signUpError;
-      }
-
-      if (signUpData?.user) {
-        // Create profile entry manually if needed
-        const { error: profileError } = await supabase
+        // If signup fails, clean up the profile we just created
+        await supabase
           .from('profiles')
-          .insert([
-            {
-              id: signUpData.user.id,
-              full_name: data.full_name,
-              email: data.email,
-              username: data.username,
-              contact_number: data.contact_number,
-              position: data.position,
-              birthdate: data.birthdate,
-              address: data.address,
-              gender: data.gender,
-            }
-          ]);
-
-        if (profileError) {
-          console.error("Profile creation error:", profileError);
-          // Don't throw here, as the user is already created
-          toast({
-            title: "Warning",
-            description: "Account created but profile setup incomplete. Please contact support.",
-            variant: "destructive",
-          });
-        }
+          .delete()
+          .match({ email: data.email });
+        throw signUpError;
       }
 
       // Show success message
