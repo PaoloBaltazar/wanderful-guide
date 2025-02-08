@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -75,14 +76,35 @@ const Login = () => {
     );
 
     // Listen for auth errors
-    const handleAuthError = (e: CustomEvent<any>) => {
+    const handleAuthError = async (e: CustomEvent<any>) => {
       const error = e.detail?.error;
+      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
+      const email = emailInput?.value;
+
       if (error?.message === "Email not confirmed") {
         setEmailConfirmationError(true);
-        const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-        setUnconfirmedEmail(emailInput?.value || null);
+        setUnconfirmedEmail(email || null);
       } else if (error?.message.includes("Invalid login credentials")) {
         setLoginError("Invalid email or password. Please try again.");
+        
+        // Log failed login attempt
+        try {
+          const response = await fetch(`${window.location.origin}/functions/v1/handle-failed-login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ email })
+          });
+
+          if (!response.ok) {
+            console.error('Failed to log login attempt');
+          }
+        } catch (error) {
+          console.error('Error logging failed login:', error);
+        }
+
         toast({
           title: "Error",
           description: "Invalid email or password",
