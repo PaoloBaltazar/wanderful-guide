@@ -1,3 +1,4 @@
+
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,11 @@ interface NewEmployeeForm {
   username: string;
   contact_number: string;
   location: string;
+}
+
+interface CreateEmployeeResponse {
+  id?: string;
+  error?: string;
 }
 
 const initialFormState: NewEmployeeForm = {
@@ -151,8 +157,10 @@ const Employees = () => {
         employee_location: formData.location,
       });
 
-      if (error || (data && 'error' in data)) {
-        throw new Error(error?.message || (data as { error: string }).error);
+      const response = data as CreateEmployeeResponse;
+
+      if (error || response.error) {
+        throw new Error(error?.message || response.error || 'Failed to add employee');
       }
 
       toast({
