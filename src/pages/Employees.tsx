@@ -5,6 +5,7 @@ import { Plus, Search, Mail, Phone, MapPin, Calendar, Trash2 } from "lucide-reac
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -28,15 +29,36 @@ interface Profile {
   role: string;
 }
 
+interface NewEmployeeForm {
+  email: string;
+  password: string;
+  full_name: string;
+  username: string;
+  contact_number: string;
+  location: string;
+}
+
+const initialFormState: NewEmployeeForm = {
+  email: "",
+  password: "",
+  full_name: "",
+  username: "",
+  contact_number: "",
+  location: "",
+};
+
 const Employees = () => {
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [formData, setFormData] = useState<NewEmployeeForm>(initialFormState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,6 +131,50 @@ const Employees = () => {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddEmployee = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.rpc('create_new_employee', {
+        employee_email: formData.email,
+        employee_password: formData.password,
+        employee_full_name: formData.full_name,
+        employee_username: formData.username,
+        employee_contact: formData.contact_number,
+        employee_location: formData.location,
+      });
+
+      if (error || (data && 'error' in data)) {
+        throw new Error(error?.message || (data as { error: string }).error);
+      }
+
+      toast({
+        title: "Success",
+        description: "Employee has been added successfully",
+      });
+
+      setIsAddModalOpen(false);
+      setFormData(initialFormState);
+      fetchEmployees();
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add employee",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredEmployees = employees.filter(employee => 
     employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -132,7 +198,10 @@ const Employees = () => {
               <Trash2 className="w-4 h-4 mr-2" />
               Delete Employees
             </Button>
-            <Button className="w-full md:w-auto">
+            <Button 
+              className="w-full md:w-auto"
+              onClick={() => setIsAddModalOpen(true)}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Add Employee
             </Button>
@@ -261,6 +330,95 @@ const Employees = () => {
               disabled={selectedEmployees.length === 0 || isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete Selected"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Employee</DialogTitle>
+            <DialogDescription>
+              Fill in the details to create a new employee account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="employee@company.com"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleInputChange}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                placeholder="johndoe"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contact_number">Contact Number</Label>
+              <Input
+                id="contact_number"
+                name="contact_number"
+                value={formData.contact_number}
+                onChange={handleInputChange}
+                placeholder="+1234567890"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                placeholder="New York, USA"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsAddModalOpen(false);
+              setFormData(initialFormState);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddEmployee}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Adding..." : "Add Employee"}
             </Button>
           </DialogFooter>
         </DialogContent>

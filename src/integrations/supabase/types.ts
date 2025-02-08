@@ -405,6 +405,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_new_employee: {
+        Args: {
+          employee_email: string
+          employee_password: string
+          employee_full_name: string
+          employee_username: string
+          employee_contact: string
+          employee_location: string
+          employee_role?: string
+        }
+        Returns: Json
+      }
       decrypt_sensitive_data: {
         Args: {
           encrypted_data: string
