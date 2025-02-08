@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -71,28 +72,6 @@ export const SignupForm = () => {
 
       if (!signUpData.user?.id) {
         throw new Error("Failed to create user account");
-      }
-
-      // Create the profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: signUpData.user.id,
-          full_name: data.full_name,
-          email: data.email,
-          username: data.username,
-          contact_number: data.contact_number,
-          position: data.position,
-          birthdate: data.birthdate,
-          address: data.address,
-          gender: data.gender,
-        }]);
-
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-        // Clean up the auth user if profile creation fails
-        await supabase.auth.admin.deleteUser(signUpData.user.id);
-        throw profileError;
       }
 
       // Show success message
