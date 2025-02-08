@@ -266,9 +266,9 @@ export type Database = {
           birthdate: string | null
           contact_number: string | null
           created_at: string
-          email: string
+          email: string | null
           encrypted_data: string | null
-          full_name: string
+          full_name: string | null
           gender: string | null
           id: string
           location: string | null
@@ -282,9 +282,9 @@ export type Database = {
           birthdate?: string | null
           contact_number?: string | null
           created_at?: string
-          email: string
+          email?: string | null
           encrypted_data?: string | null
-          full_name: string
+          full_name?: string | null
           gender?: string | null
           id: string
           location?: string | null
@@ -298,9 +298,9 @@ export type Database = {
           birthdate?: string | null
           contact_number?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
           encrypted_data?: string | null
-          full_name?: string
+          full_name?: string | null
           gender?: string | null
           id?: string
           location?: string | null

@@ -61,6 +61,11 @@ export const SignupForm = () => {
           data: {
             full_name: data.full_name,
             username: data.username,
+            birthdate: data.birthdate,
+            contact_number: data.contact_number,
+            address: data.address,
+            gender: data.gender,
+            position: data.position
           }
         }
       });
