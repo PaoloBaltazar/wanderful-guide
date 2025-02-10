@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -148,19 +147,32 @@ const Employees = () => {
   const handleAddEmployee = async () => {
     setIsSubmitting(true);
     try {
+      if (!formData.email || !formData.password || !formData.full_name) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const { data, error } = await supabase.rpc('create_new_employee', {
         employee_email: formData.email,
         employee_password: formData.password,
         employee_full_name: formData.full_name,
-        employee_username: formData.username,
-        employee_contact: formData.contact_number,
-        employee_location: formData.location,
+        employee_username: formData.username || formData.email.split('@')[0],
+        employee_contact: formData.contact_number || '',
+        employee_location: formData.location || '',
       });
 
-      const response = data as CreateEmployeeResponse;
+      if (error) {
+        console.error('Error creating employee:', error);
+        throw new Error(error.message);
+      }
 
-      if (error || response.error) {
-        throw new Error(error?.message || response.error || 'Failed to add employee');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       toast({
@@ -353,7 +365,7 @@ const Employees = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="required">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -361,10 +373,11 @@ const Employees = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="employee@company.com"
+                required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="required">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -372,16 +385,18 @@ const Employees = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="••••••••"
+                required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="full_name">Full Name</Label>
+              <Label htmlFor="full_name" className="required">Full Name</Label>
               <Input
                 id="full_name"
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleInputChange}
                 placeholder="John Doe"
+                required
               />
             </div>
             <div className="grid gap-2">
@@ -424,7 +439,7 @@ const Employees = () => {
             </Button>
             <Button 
               onClick={handleAddEmployee}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !formData.email || !formData.password || !formData.full_name}
             >
               {isSubmitting ? "Adding..." : "Add Employee"}
             </Button>
