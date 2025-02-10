@@ -1,3 +1,4 @@
+
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ interface NewEmployeeForm {
   location: string;
 }
 
-interface CreateEmployeeResponse {
+type CreateEmployeeResponse = {
   id?: string;
   error?: string;
 }
@@ -171,8 +172,9 @@ const Employees = () => {
         throw new Error(error.message);
       }
 
-      if (data.error) {
-        throw new Error(data.error);
+      const response = data as CreateEmployeeResponse;
+      if (response.error) {
+        throw new Error(response.error);
       }
 
       toast({
