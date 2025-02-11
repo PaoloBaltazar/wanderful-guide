@@ -57,16 +57,16 @@ export const SignupForm = () => {
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/success-confirmation`,
           data: {
-            full_name: data.full_name,
             username: data.username,
+            full_name: data.full_name,
             birthdate: data.birthdate,
             contact_number: data.contact_number,
             address: data.address,
             gender: data.gender,
             position: data.position
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/success-confirmation`
         }
       });
 
@@ -75,7 +75,7 @@ export const SignupForm = () => {
         throw signUpError;
       }
 
-      if (!signUpData.user?.id) {
+      if (!signUpData.user) {
         throw new Error("Failed to create user account");
       }
 
@@ -91,12 +91,12 @@ export const SignupForm = () => {
     } catch (error: any) {
       console.error("Signup error:", error);
       const errorMessage = handleAuthError(error);
+      setError(errorMessage);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }
