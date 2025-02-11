@@ -3,13 +3,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { SignupForm } from "@/components/auth/SignupForm";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { EmailConfirmationAlert } from "@/components/auth/EmailConfirmationAlert";
+import { LoginError } from "@/components/auth/LoginError";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,111 +19,27 @@ const Login = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize session check
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          navigate("/");
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
       }
     };
 
-    initializeAuth();
+    checkSession();
 
     // Handle email confirmation from URL
     const token_hash = searchParams.get("token_hash");
     const type = searchParams.get("type");
     
     if (token_hash && type) {
-      const handleEmailConfirmation = async () => {
-        try {
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash,
-            type: type as any,
-          });
-          
-          if (!error) {
-            navigate("/success-confirmation");
-          } else {
-            console.error("Email verification error:", error);
-            toast({
-              title: "Error",
-              description: "Invalid or expired verification link",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("Email verification error:", error);
-        }
-      };
-      
-      handleEmailConfirmation();
+      handleEmailConfirmation(token_hash, type);
     }
 
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event, session);
-        
-        if (event === "SIGNED_IN" && session) {
-          toast({
-            title: "Success",
-            description: "Successfully signed in",
-          });
-          navigate("/");
-        } else if (event === "USER_UPDATED") {
-          setEmailConfirmationError(false);
-          setUnconfirmedEmail(null);
-          setLoginError(null);
-        } else if (event === "SIGNED_OUT") {
-          setEmailConfirmationError(false);
-          setUnconfirmedEmail(null);
-          setLoginError(null);
-        }
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     // Listen for auth errors
-    const handleAuthError = async (e: CustomEvent<any>) => {
-      const error = e.detail?.error;
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      const email = emailInput?.value;
-
-      if (error?.message === "Email not confirmed") {
-        setEmailConfirmationError(true);
-        setUnconfirmedEmail(email || null);
-      } else if (error?.message.includes("Invalid login credentials")) {
-        setLoginError("Invalid email or password. Please try again.");
-        
-        // Log failed login attempt
-        try {
-          const response = await fetch(`${window.location.origin}/functions/v1/handle-failed-login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-            },
-            body: JSON.stringify({ email })
-          });
-
-          if (!response.ok) {
-            console.error('Failed to log login attempt');
-          }
-        } catch (error) {
-          console.error('Error logging failed login:', error);
-        }
-
-        toast({
-          title: "Error",
-          description: "Invalid email or password",
-          variant: "destructive",
-        });
-      }
-    };
-
     window.addEventListener('supabase.auth.error', handleAuthError as EventListener);
 
     return () => {
@@ -133,6 +47,77 @@ const Login = () => {
       window.removeEventListener('supabase.auth.error', handleAuthError as EventListener);
     };
   }, [navigate, toast, searchParams]);
+
+  const handleEmailConfirmation = async (token_hash: string, type: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash,
+        type: type as any,
+      });
+      
+      if (!error) {
+        navigate("/success-confirmation");
+      } else {
+        console.error("Email verification error:", error);
+        toast({
+          title: "Error",
+          description: "Invalid or expired verification link",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Email verification error:", error);
+    }
+  };
+
+  const handleAuthStateChange = async (event: string, session: any) => {
+    console.log("Auth state changed:", event, session);
+    
+    if (event === "SIGNED_IN" && session) {
+      toast({
+        title: "Success",
+        description: "Successfully signed in",
+      });
+      navigate("/");
+    } else if (event === "USER_UPDATED") {
+      resetErrors();
+    } else if (event === "SIGNED_OUT") {
+      resetErrors();
+    }
+  };
+
+  const handleAuthError = async (e: CustomEvent<any>) => {
+    const error = e.detail?.error;
+    const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
+    const email = emailInput?.value;
+
+    if (error?.message === "Email not confirmed") {
+      setEmailConfirmationError(true);
+      setUnconfirmedEmail(email || null);
+    } else if (error?.message.includes("Invalid login credentials")) {
+      setLoginError("Invalid email or password. Please try again.");
+      await logFailedLoginAttempt(email);
+    }
+  };
+
+  const logFailedLoginAttempt = async (email: string) => {
+    try {
+      const response = await fetch(`${window.location.origin}/functions/v1/handle-failed-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ email })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to log login attempt');
+      }
+    } catch (error) {
+      console.error('Error logging failed login:', error);
+    }
+  };
 
   const handleResendVerification = async () => {
     if (!unconfirmedEmail) return;
@@ -161,6 +146,12 @@ const Login = () => {
     }
   };
 
+  const resetErrors = () => {
+    setEmailConfirmationError(false);
+    setUnconfirmedEmail(null);
+    setLoginError(null);
+  };
+
   return (
     <Layout>
       <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -187,64 +178,17 @@ const Login = () => {
                 </p>
               </div>
 
-              {emailConfirmationError && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="flex flex-col space-y-2">
-                    <p>Please verify your email before signing in.</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleResendVerification}
-                      className="w-full mt-2"
-                    >
-                      Resend Verification Email
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
+              <EmailConfirmationAlert 
+                email={unconfirmedEmail} 
+                onResend={handleResendVerification} 
+              />
 
-              {loginError && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{loginError}</AlertDescription>
-                </Alert>
-              )}
+              <LoginError error={loginError} />
 
               <div className="mt-8">
-                <Auth
-                  supabaseClient={supabase}
-                  appearance={{
-                    theme: ThemeSupa,
-                    variables: {
-                      default: {
-                        colors: {
-                          brand: '#1E40AF',
-                          brandAccent: '#1E40AF',
-                        },
-                      },
-                    },
-                    style: {
-                      anchor: { display: 'none' },
-                      message: { display: 'none' },
-                    },
-                    className: {
-                      anchor: 'hidden',
-                      button: 'w-full bg-primary hover:bg-primary/90 text-white',
-                    },
-                  }}
-                  providers={[]}
-                  localization={{
-                    variables: {
-                      sign_in: {
-                        email_label: "Outlook Email",
-                        email_input_placeholder: "your.email@outlook.com",
-                      },
-                    },
-                  }}
-                  view="sign_in"
-                />
+                <LoginForm />
               </div>
+
               <p className="text-center mt-6 text-sm text-gray-600">
                 Don't have an account?{" "}
                 <button

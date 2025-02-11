@@ -23,17 +23,41 @@ serve(async (req) => {
       }
     )
 
-    // Log the failed login attempt
-    const { error } = await supabaseAdmin
-      .from('audit_logs')
-      .insert({
-        action: 'FAILED_LOGIN_ATTEMPT',
-        table_name: 'auth.users',
-        ip_address: ip_address || req.headers.get('x-real-ip'),
-        new_data: { email }
-      })
+    // Try to find existing failed attempts for this email
+    const { data: existingAttempt, error: fetchError } = await supabaseAdmin
+      .from('failed_login_attempts')
+      .select('*')
+      .eq('email', email)
+      .single()
 
-    if (error) throw error
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows found
+      throw fetchError
+    }
+
+    if (existingAttempt) {
+      // Update existing record
+      const { error: updateError } = await supabaseAdmin
+        .from('failed_login_attempts')
+        .update({
+          attempt_count: existingAttempt.attempt_count + 1,
+          last_attempt: new Date().toISOString(),
+          ip_address: ip_address || req.headers.get('x-real-ip')
+        })
+        .eq('id', existingAttempt.id)
+
+      if (updateError) throw updateError
+    } else {
+      // Create new record
+      const { error: insertError } = await supabaseAdmin
+        .from('failed_login_attempts')
+        .insert({
+          email,
+          ip_address: ip_address || req.headers.get('x-real-ip'),
+          attempt_count: 1
+        })
+
+      if (insertError) throw insertError
+    }
 
     return new Response(
       JSON.stringify({ message: 'Failed login attempt logged successfully' }),
@@ -43,6 +67,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Error in handle-failed-login:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
