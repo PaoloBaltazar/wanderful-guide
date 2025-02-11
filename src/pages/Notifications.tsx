@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -23,6 +23,7 @@ interface Notification {
 const Notifications = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -119,7 +120,14 @@ const Notifications = () => {
     },
   });
 
-  // Subscribe to new notifications
+  const handleNotificationClick = (notification: Notification) => {
+    if (notification.status === "unread") {
+      markAsReadMutation.mutate(notification.id);
+    }
+    
+    navigate(`/tasks?taskId=${notification.task_id}`);
+  };
+
   useEffect(() => {
     const channel = supabase
       .channel('notifications_changes')
@@ -224,7 +232,11 @@ const Notifications = () => {
 
         <div className="space-y-4">
           {notifications.map((notification) => (
-            <Card key={notification.id} className={`p-4 ${notification.status === 'unread' ? 'bg-primary/5' : ''}`}>
+            <Card 
+              key={notification.id} 
+              className={`p-4 ${notification.status === 'unread' ? 'bg-primary/5' : ''} hover:bg-secondary/10 cursor-pointer transition-colors`}
+              onClick={() => handleNotificationClick(notification)}
+            >
               <div className="flex items-start gap-4">
                 <div className="mt-1">
                   {getNotificationIcon(notification.type)}
@@ -243,12 +255,15 @@ const Notifications = () => {
                   </div>
                   <p className="text-gray-600 mt-1">{notification.message}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   {notification.status === "unread" && (
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => handleMarkAsRead(notification.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkAsRead(notification.id);
+                      }}
                     >
                       Mark as read
                     </Button>
@@ -256,7 +271,10 @@ const Notifications = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteNotification(notification.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNotification(notification.id);
+                    }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
