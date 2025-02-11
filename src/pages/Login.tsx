@@ -21,14 +21,19 @@ const Login = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/");
+    // Initialize session check
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
       }
     };
 
-    checkSession();
+    initializeAuth();
 
     // Handle email confirmation from URL
     const token_hash = searchParams.get("token_hash");
@@ -36,28 +41,36 @@ const Login = () => {
     
     if (token_hash && type) {
       const handleEmailConfirmation = async () => {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash,
-          type: type as any,
-        });
-        
-        if (!error) {
-          navigate("/success-confirmation");
-        } else {
-          toast({
-            title: "Error",
-            description: "Invalid or expired verification link",
-            variant: "destructive",
+        try {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash,
+            type: type as any,
           });
+          
+          if (!error) {
+            navigate("/success-confirmation");
+          } else {
+            console.error("Email verification error:", error);
+            toast({
+              title: "Error",
+              description: "Invalid or expired verification link",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("Email verification error:", error);
         }
       };
       
       handleEmailConfirmation();
     }
 
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === "SIGNED_IN") {
+        console.log("Auth state changed:", event, session);
+        
+        if (event === "SIGNED_IN" && session) {
           toast({
             title: "Success",
             description: "Successfully signed in",
@@ -124,22 +137,27 @@ const Login = () => {
   const handleResendVerification = async () => {
     if (!unconfirmedEmail) return;
 
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: unconfirmedEmail,
-    });
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: unconfirmedEmail,
+      });
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to resend verification email",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Verification email sent",
-      });
+      if (error) {
+        console.error("Resend verification error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to resend verification email",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Verification email sent",
+        });
+      }
+    } catch (error) {
+      console.error("Resend verification error:", error);
     }
   };
 
