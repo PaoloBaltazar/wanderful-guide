@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
@@ -10,7 +11,6 @@ import SuccessConfirmation from "@/pages/SuccessConfirmation";
 import Notifications from "@/pages/Notifications";
 import Calendar from "@/pages/Calendar";
 import Employees from "@/pages/Employees";
-import Performance from "@/pages/Performance";
 import Documents from "@/pages/Documents";
 import IPManagement from "@/pages/IPManagement";
 import Unauthorized from "@/pages/Unauthorized";
@@ -81,14 +81,6 @@ function App() {
               element={
                 <IPAccessGuard>
                   <Employees />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/performance"
-              element={
-                <IPAccessGuard>
-                  <Performance />
                 </IPAccessGuard>
               }
             />

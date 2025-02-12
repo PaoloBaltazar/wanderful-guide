@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, Home, Bell, Calendar, Users, BarChart2, FileText, CheckSquare, LogOut, Shield } from "lucide-react";
+import { Menu, X, Home, Bell, Calendar, Users, FileText, CheckSquare, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
@@ -19,7 +20,6 @@ const menuItems = [
   { icon: Bell, label: "Notifications", path: "/notifications" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: Users, label: "Employees", path: "/employees" },
-  { icon: BarChart2, label: "Performance", path: "/performance" },
   { icon: FileText, label: "Documents", path: "/documents" },
   { icon: Shield, label: "IP Management", path: "/ip-management" },
 ];
