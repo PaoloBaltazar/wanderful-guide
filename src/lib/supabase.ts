@@ -8,10 +8,10 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Create a single instance of the Supabase client
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
-    persistSession: true,
-    storageKey: 'supabase.auth.token',
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    persistSession: true,
+    detectSessionInUrl: false,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    flowType: 'pkce',
   }
 });
