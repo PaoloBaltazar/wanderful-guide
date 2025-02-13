@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { TaskList } from "@/components/dashboard/TaskList";
@@ -81,8 +82,8 @@ const Tasks = () => {
     <Layout>
       <div className="space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Tasks</h1>
-          <p className="text-gray-600 mt-1 text-sm md:text-base">View and manage all tasks</p>
+          <h1 className="text-2xl md:text-3xl font-bold">All HR Tasks</h1>
+          <p className="text-gray-600 mt-1 text-sm md:text-base">View and manage all HR department tasks</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -143,7 +144,7 @@ const Tasks = () => {
 
         <div className="grid grid-cols-1 gap-6">
           <TaskList 
-            title="All Tasks" 
+            title="All Department Tasks" 
             tasks={filteredTasks}
             onStatusChange={(taskId, newStatus) => {
               console.log("Status changed:", taskId, newStatus);

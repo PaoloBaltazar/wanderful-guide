@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -27,7 +28,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('assigned_to', session.user.email)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -67,7 +68,9 @@ const Index = () => {
   };
 
   const handleTaskCreated = (newTask: Task) => {
-    setTasks(prevTasks => [newTask, ...prevTasks]);
+    if (newTask.assigned_to === supabase.auth.getSession()?.data?.session?.user?.email) {
+      setTasks(prevTasks => [newTask, ...prevTasks]);
+    }
   };
 
   const pendingTasks = tasks.filter(task => task.status === "pending").length;
@@ -114,7 +117,7 @@ const Index = () => {
             onTasksChange={fetchTasks}
           />
           <TaskList 
-            title="Completed Tasks" 
+            title="My Completed Tasks" 
             tasks={tasks.filter(task => task.status === "completed")}
             onStatusChange={handleStatusChange}
             onTasksChange={fetchTasks}
