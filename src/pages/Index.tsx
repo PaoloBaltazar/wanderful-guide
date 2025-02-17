@@ -67,8 +67,9 @@ const Index = () => {
     ));
   };
 
-  const handleTaskCreated = (newTask: Task) => {
-    if (newTask.assigned_to === supabase.auth.getSession()?.data?.session?.user?.email) {
+  const handleTaskCreated = async (newTask: Task) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && newTask.assigned_to === session.user.email) {
       setTasks(prevTasks => [newTask, ...prevTasks]);
     }
   };
