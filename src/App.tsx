@@ -11,6 +11,7 @@ import Notifications from "@/pages/Notifications";
 import Calendar from "@/pages/Calendar";
 import Employees from "@/pages/Employees";
 import Documents from "@/pages/Documents";
+import Unauthorized from "@/pages/Unauthorized";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/success-confirmation" element={<SuccessConfirmation />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/" element={<Index />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/notifications" element={<Notifications />} />
