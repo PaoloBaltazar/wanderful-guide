@@ -1,4 +1,2 @@
-project_id = "pnuqluofutrzeigqtdju"
 
-[functions.validate-ip]
-verify_jwt = false
+project_id = "pnuqluofutrzeigqtdju"
