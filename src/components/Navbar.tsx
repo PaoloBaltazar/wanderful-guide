@@ -19,8 +19,9 @@ const menuItems = [
   { icon: CheckSquare, label: "Tasks", path: "/tasks" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: Users, label: "Employees", path: "/employees", adminOnly: true },
+  { icon: Users, label: "Employees", path: "/employees" },
   { icon: FileText, label: "Documents", path: "/documents" },
+  { icon: Shield, label: "IP Management", path: "/ip-management" },
 ];
 
 export const Navbar = () => {
@@ -29,25 +30,6 @@ export const Navbar = () => {
   const location = useLocation();
   const supabase = useSupabaseClient();
   const user = useUser();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (user) {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (data && !error) {
-          setIsAdmin(data.role === 'admin');
-        }
-      }
-    };
-
-    checkAdminStatus();
-  }, [user]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -59,9 +41,6 @@ export const Navbar = () => {
       {menuItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
-        
-        // Skip admin-only items if user is not admin
-        if (item.adminOnly && !isAdmin) return null;
         
         return (
           <Button

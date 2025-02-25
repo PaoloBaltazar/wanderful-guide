@@ -1,50 +1,41 @@
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { supabase } from "@/lib/supabase";
 
-interface LoginFormProps {
-  onSubmit: (email: string, password: string) => Promise<void>;
-  loading: boolean;
-}
-
-export const LoginForm = ({ onSubmit, loading }: LoginFormProps) => {
-  const [email, setEmail] = useState("hradmin@yourcompany.com");
-  const [password, setPassword] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(email, password);
-  };
-
+export const LoginForm = () => {
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled
-          className="bg-gray-100"
-        />
-      </div>
-      <div>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing in..." : "Sign in"}
-      </Button>
-    </form>
+    <Auth
+      supabaseClient={supabase}
+      appearance={{
+        theme: ThemeSupa,
+        variables: {
+          default: {
+            colors: {
+              brand: '#1E40AF',
+              brandAccent: '#1E40AF',
+            },
+          },
+        },
+        style: {
+          anchor: { display: 'none' },
+          message: { display: 'none' },
+        },
+        className: {
+          anchor: 'hidden',
+          button: 'w-full bg-primary hover:bg-primary/90 text-white',
+        },
+      }}
+      providers={[]}
+      localization={{
+        variables: {
+          sign_in: {
+            email_label: "Outlook Email",
+            email_input_placeholder: "your.email@outlook.com",
+          },
+        },
+      }}
+      view="sign_in"
+    />
   );
 };
