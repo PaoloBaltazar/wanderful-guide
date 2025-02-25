@@ -21,31 +21,39 @@ export const LoginForm = () => {
     setLoading(true);
 
     try {
-      const { data: userRoleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
-
-      if (roleError) throw roleError;
-
-      const { error } = await supabase.auth.signInWithPassword({
+      // First, attempt to sign in
+      const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (signInError) throw signInError;
+
+      // After successful sign in, check user role
+      const { data: userRoleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', signInData.user.id)
+        .single();
+
+      if (roleError) {
+        console.error('Role check error:', roleError);
+      }
 
       if (userRoleData?.role === 'admin') {
-        // For admin users, we'll implement phone verification
-        // This is where we'd normally integrate with a real SMS service
         toast({
           title: "Admin login successful",
           description: "Welcome back, admin!",
         });
+      } else {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
       }
 
     } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Error",
         description: error.message,
