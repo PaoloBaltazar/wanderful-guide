@@ -2,7 +2,7 @@
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Mail, Phone, MapPin, Calendar, Trash2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Calendar, Trash2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +65,8 @@ const Employees = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<NewEmployeeForm>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,20 +74,31 @@ const Employees = () => {
   }, []);
 
   const fetchEmployees = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*');
+    setIsLoading(true);
+    setError(null);
     
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      console.log("Fetched employees:", data); // Debug log
+      setEmployees(data || []);
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch employees');
       toast({
         title: "Error",
         description: "Failed to fetch employees",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    setEmployees(data || []);
   };
 
   const handleDeleteEmployees = async () => {
@@ -198,8 +211,8 @@ const Employees = () => {
   };
 
   const filteredEmployees = employees.filter(employee => 
-    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (employee.username && employee.username.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -241,53 +254,83 @@ const Employees = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredEmployees.map((employee) => (
-            <Card key={employee.id} className="p-4 md:p-6">
-              <div className="flex items-start gap-4">
-                <img
-                  src={employee.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.email}`}
-                  alt={employee.full_name}
-                  className="w-12 h-12 md:w-16 md:h-16 rounded-full"
-                />
-                <div className="flex-1 min-w-0 space-y-3 md:space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-base md:text-lg truncate">{employee.full_name}</h3>
-                    {employee.username && (
-                      <p className="text-xs md:text-sm text-gray-500 truncate">@{employee.username}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center text-xs md:text-sm text-gray-600">
-                      <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">{employee.email}</span>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Loading employees...</span>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+            <p className="text-red-600">{error}</p>
+            <Button onClick={fetchEmployees} variant="outline" className="mt-2">
+              Retry
+            </Button>
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+            {searchTerm ? (
+              <p className="text-gray-600">No employees match your search criteria</p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-gray-600">No employees found in the system</p>
+                <Button onClick={() => setIsAddModalOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add your first employee
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {filteredEmployees.map((employee) => (
+              <Card key={employee.id} className="p-4 md:p-6">
+                <div className="flex items-start gap-4">
+                  <img
+                    src={employee.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.email}`}
+                    alt={employee.full_name || "Employee"}
+                    className="w-12 h-12 md:w-16 md:h-16 rounded-full"
+                  />
+                  <div className="flex-1 min-w-0 space-y-3 md:space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-base md:text-lg truncate">{employee.full_name || "Unnamed Employee"}</h3>
+                      {employee.username && (
+                        <p className="text-xs md:text-sm text-gray-500 truncate">@{employee.username}</p>
+                      )}
                     </div>
                     
-                    {employee.contact_number && (
+                    <div className="space-y-2">
+                      {employee.email && (
+                        <div className="flex items-center text-xs md:text-sm text-gray-600">
+                          <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{employee.email}</span>
+                        </div>
+                      )}
+                      
+                      {employee.contact_number && (
+                        <div className="flex items-center text-xs md:text-sm text-gray-600">
+                          <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{employee.contact_number}</span>
+                        </div>
+                      )}
+                      
+                      {employee.location && (
+                        <div className="flex items-center text-xs md:text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{employee.location}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex items-center text-xs md:text-sm text-gray-600">
-                        <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">{employee.contact_number}</span>
+                        <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">Joined {new Date(employee.created_at).toLocaleDateString()}</span>
                       </div>
-                    )}
-                    
-                    {employee.location && (
-                      <div className="flex items-center text-xs md:text-sm text-gray-600">
-                        <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">{employee.location}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center text-xs md:text-sm text-gray-600">
-                      <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">Joined {new Date(employee.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
@@ -314,7 +357,7 @@ const Employees = () => {
                     }}
                   />
                   <label htmlFor={employee.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    {employee.full_name}
+                    {employee.full_name || employee.email}
                   </label>
                 </div>
               ))}

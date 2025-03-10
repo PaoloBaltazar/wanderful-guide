@@ -26,12 +26,11 @@ export const LoginForm = () => {
           button: 'w-full bg-primary hover:bg-primary/90 text-white',
         },
       }}
-      providers={[]}
       localization={{
         variables: {
           sign_in: {
-            email_label: "Outlook Email",
-            email_input_placeholder: "your.email@outlook.com",
+            email_label: "Email",
+            email_input_placeholder: "your.email@example.com",
           },
         },
       }}
