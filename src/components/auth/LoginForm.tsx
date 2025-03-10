@@ -30,8 +30,11 @@ export const LoginForm = () => {
       localization={{
         variables: {
           sign_in: {
-            email_label: "Outlook Email",
-            email_input_placeholder: "your.email@outlook.com",
+            email_label: "Email",
+            email_input_placeholder: "your.email@company.com",
+            password_label: "Password",
+            password_input_placeholder: "Your password",
+            button_label: "Sign in",
           },
         },
       }}

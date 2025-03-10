@@ -20,14 +20,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface Profile {
   id: string;
-  full_name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   avatar_url: string | null;
   created_at: string;
   username: string | null;
   contact_number: string | null;
   location: string | null;
-  role: string;
+  role: string | null;
 }
 
 interface NewEmployeeForm {
