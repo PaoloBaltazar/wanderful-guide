@@ -2,7 +2,7 @@
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Mail, Phone, MapPin, Calendar, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Search, Mail, Phone, MapPin, Calendar, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -20,14 +20,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface Profile {
   id: string;
-  full_name: string | null;
-  email: string | null;
+  full_name: string;
+  email: string;
   avatar_url: string | null;
   created_at: string;
   username: string | null;
   contact_number: string | null;
   location: string | null;
-  role: string | null;
+  role: string;
 }
 
 interface NewEmployeeForm {
@@ -65,8 +65,6 @@ const Employees = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<NewEmployeeForm>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,40 +72,20 @@ const Employees = () => {
   }, []);
 
   const fetchEmployees = async () => {
-    setIsLoading(true);
-    setError(null);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*');
     
-    try {
-      console.log("Fetching employees data...");
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (error) {
-        console.error("Error fetching employees:", error);
-        setError(error.message);
-        toast({
-          title: "Error",
-          description: "Failed to fetch employees: " + error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("Employees data fetched:", data ? data.length : 0, "records");
-      setEmployees(data || []);
-    } catch (err) {
-      console.error("Unexpected error fetching employees:", err);
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+    if (error) {
       toast({
         title: "Error",
         description: "Failed to fetch employees",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      return;
     }
+
+    setEmployees(data || []);
   };
 
   const handleDeleteEmployees = async () => {
@@ -220,8 +198,8 @@ const Employees = () => {
   };
 
   const filteredEmployees = employees.filter(employee => 
-    (employee.full_name && employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (employee.email && employee.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (employee.username && employee.username.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -263,79 +241,53 @@ const Employees = () => {
           />
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center py-10">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-3"></div>
-              <p className="text-gray-500">Loading employees...</p>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="text-red-500 mb-4">
-              <p className="text-lg font-semibold">Error loading employees</p>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-            <Button onClick={fetchEmployees} variant="outline" className="mt-2">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        ) : filteredEmployees.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">No employees found{searchTerm ? " matching your search" : ""}.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {filteredEmployees.map((employee) => (
-              <Card key={employee.id} className="p-4 md:p-6">
-                <div className="flex items-start gap-4">
-                  <img
-                    src={employee.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.email || employee.id}`}
-                    alt={employee.full_name || "Employee"}
-                    className="w-12 h-12 md:w-16 md:h-16 rounded-full"
-                  />
-                  <div className="flex-1 min-w-0 space-y-3 md:space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-base md:text-lg truncate">{employee.full_name || "Unnamed Employee"}</h3>
-                      {employee.username && (
-                        <p className="text-xs md:text-sm text-gray-500 truncate">@{employee.username}</p>
-                      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {filteredEmployees.map((employee) => (
+            <Card key={employee.id} className="p-4 md:p-6">
+              <div className="flex items-start gap-4">
+                <img
+                  src={employee.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.email}`}
+                  alt={employee.full_name}
+                  className="w-12 h-12 md:w-16 md:h-16 rounded-full"
+                />
+                <div className="flex-1 min-w-0 space-y-3 md:space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-base md:text-lg truncate">{employee.full_name}</h3>
+                    {employee.username && (
+                      <p className="text-xs md:text-sm text-gray-500 truncate">@{employee.username}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center text-xs md:text-sm text-gray-600">
+                      <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{employee.email}</span>
                     </div>
                     
-                    <div className="space-y-2">
-                      {employee.email && (
-                        <div className="flex items-center text-xs md:text-sm text-gray-600">
-                          <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">{employee.email}</span>
-                        </div>
-                      )}
-                      
-                      {employee.contact_number && (
-                        <div className="flex items-center text-xs md:text-sm text-gray-600">
-                          <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">{employee.contact_number}</span>
-                        </div>
-                      )}
-                      
-                      {employee.location && (
-                        <div className="flex items-center text-xs md:text-sm text-gray-600">
-                          <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">{employee.location}</span>
-                        </div>
-                      )}
-                      
+                    {employee.contact_number && (
                       <div className="flex items-center text-xs md:text-sm text-gray-600">
-                        <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Joined {new Date(employee.created_at).toLocaleDateString()}</span>
+                        <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">{employee.contact_number}</span>
                       </div>
+                    )}
+                    
+                    {employee.location && (
+                      <div className="flex items-center text-xs md:text-sm text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">{employee.location}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center text-xs md:text-sm text-gray-600">
+                      <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">Joined {new Date(employee.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
 
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
@@ -362,7 +314,7 @@ const Employees = () => {
                     }}
                   />
                   <label htmlFor={employee.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    {employee.full_name || employee.email || "Unnamed Employee"}
+                    {employee.full_name}
                   </label>
                 </div>
               ))}

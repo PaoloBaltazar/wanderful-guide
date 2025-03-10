@@ -83,27 +83,27 @@ const Index = () => {
       <div className="space-y-6 md:space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">My Dashboard</h1>
-            <p className="text-gray-600 mt-1 text-sm md:text-base">View and manage your assigned tasks</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+            <p className="text-gray-600 mt-1 text-sm md:text-base">Welcome back, HR Manager</p>
           </div>
           <TaskForm onTaskCreated={handleTaskCreated} />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           <StatCard
-            title="My Pending Tasks"
+            title="Pending Tasks"
             value={pendingTasks}
             icon={<Clock className="w-6 h-6 md:w-8 md:h-8" />}
             description={pendingTasks === 1 ? "1 task pending" : `${pendingTasks} tasks pending`}
           />
           <StatCard
-            title="My In Progress"
+            title="In Progress"
             value={inProgressTasks}
             icon={<AlertCircle className="w-6 h-6 md:w-8 md:h-8" />}
             description={inProgressTasks === 1 ? "1 task in progress" : `${inProgressTasks} tasks in progress`}
           />
           <StatCard
-            title="My Completed"
+            title="Completed"
             value={completedTasks}
             icon={<CheckCircle2 className="w-6 h-6 md:w-8 md:h-8" />}
             description={completedTasks === 1 ? "1 task completed" : `${completedTasks} tasks completed`}
@@ -112,7 +112,7 @@ const Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <TaskList 
-            title="My Active Tasks" 
+            title="My Tasks" 
             tasks={tasks.filter(task => task.status !== "completed")}
             onStatusChange={handleStatusChange}
             onTasksChange={fetchTasks}
