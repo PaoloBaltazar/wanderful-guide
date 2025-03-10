@@ -78,22 +78,31 @@ const Employees = () => {
     setError(null);
     
     try {
-      const { data, error } = await supabase
+      console.log("Fetching profiles from Supabase...");
+      
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
       
-      if (error) {
-        throw new Error(error.message);
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw new Error(profilesError.message);
       }
 
-      console.log("Fetched employees:", data); // Debug log
-      setEmployees(data || []);
+      console.log("Profiles data:", profilesData);
+      
+      if (profilesData && profilesData.length > 0) {
+        setEmployees(profilesData);
+      } else {
+        console.log("No profile data returned or empty array");
+        setEmployees([]);
+      }
     } catch (err) {
-      console.error('Error fetching employees:', err);
+      console.error('Error in fetchEmployees:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch employees');
       toast({
         title: "Error",
-        description: "Failed to fetch employees",
+        description: "Failed to fetch employees. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -171,6 +180,11 @@ const Employees = () => {
         return;
       }
 
+      console.log("Creating new employee with data:", {
+        ...formData,
+        password: "***" // Hide password in logs
+      });
+
       const { data, error } = await supabase.rpc('create_new_employee', {
         employee_email: formData.email,
         employee_password: formData.password,
@@ -185,6 +199,7 @@ const Employees = () => {
         throw new Error(error.message);
       }
 
+      console.log("RPC response:", data);
       const response = data as CreateEmployeeResponse;
       if (response.error) {
         throw new Error(response.error);
@@ -333,6 +348,7 @@ const Employees = () => {
         )}
       </div>
 
+      {/* Delete Employees Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -400,6 +416,7 @@ const Employees = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Add Employee Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
