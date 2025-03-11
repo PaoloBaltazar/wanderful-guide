@@ -1,3 +1,4 @@
+
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
@@ -10,10 +11,10 @@ const Unauthorized = () => {
         <Shield className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
         <p className="text-gray-600 mb-6 max-w-md">
-          Your IP address is not authorized to access this application. Please contact your administrator for assistance.
+          You need to be logged in to access this application. Please sign in with your credentials.
         </p>
         <Button asChild>
-          <Link to="/">Return to Home</Link>
+          <Link to="/login">Sign In</Link>
         </Button>
       </div>
     </Layout>
