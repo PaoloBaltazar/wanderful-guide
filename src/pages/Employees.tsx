@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { handleSignup } from "@/utils/auth";
 
 interface Profile {
   id: string;
@@ -37,11 +38,7 @@ interface NewEmployeeForm {
   username: string;
   contact_number: string;
   location: string;
-}
-
-type CreateEmployeeResponse = {
-  id?: string;
-  error?: string;
+  position: string;
 }
 
 const initialFormState: NewEmployeeForm = {
@@ -51,6 +48,7 @@ const initialFormState: NewEmployeeForm = {
   username: "",
   contact_number: "",
   location: "",
+  position: ""
 };
 
 const Employees = () => {
@@ -71,7 +69,7 @@ const Employees = () => {
 
   const fetchEmployees = async () => {
     try {
-      // Direct fetch of all profiles without admin restrictions
+      // Simplify the query to avoid RLS issues
       const { data, error } = await supabase
         .from('profiles')
         .select('*');
@@ -108,9 +106,8 @@ const Employees = () => {
     setDeleteError("");
 
     try {
-      // Simplified deletion without admin checks
+      // Delete profiles directly
       for (const userId of selectedEmployees) {
-        // Delete the profile - this will cascade to the auth user
         const { error: profileDeleteError } = await supabase
           .from('profiles')
           .delete()
@@ -168,23 +165,18 @@ const Employees = () => {
         return;
       }
 
-      // Simplified direct sign-up without admin privileges
-      const { data, error } = await supabase.auth.signUp({
+      // Use the handleSignup function from auth.ts
+      const result = await handleSignup({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.full_name,
-            username: formData.username || formData.email.split('@')[0],
-            contact_number: formData.contact_number || '',
-            location: formData.location || '',
-          }
-        }
+        full_name: formData.full_name,
+        username: formData.username || formData.email.split('@')[0],
+        contact_number: formData.contact_number || '',
+        position: formData.position || '',
       });
 
-      if (error) {
-        console.error('Error creating employee:', error);
-        throw new Error(error.message);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to add employee");
       }
 
       toast({
@@ -209,8 +201,8 @@ const Employees = () => {
   };
 
   const filteredEmployees = employees.filter(employee => 
-    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (employee.username && employee.username.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -425,6 +417,16 @@ const Employees = () => {
                 value={formData.location}
                 onChange={handleInputChange}
                 placeholder="New York, USA"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="position">Position</Label>
+              <Input
+                id="position"
+                name="position"
+                value={formData.position}
+                onChange={handleInputChange}
+                placeholder="HR Manager"
               />
             </div>
           </div>

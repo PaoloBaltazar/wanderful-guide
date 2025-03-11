@@ -14,38 +14,10 @@ serve(async (req) => {
     const clientIP = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
     console.log("Client IP:", clientIP);
 
-    // Create a Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    // Check if IP is in the allowed list
-    const { data: allowedIPs, error: ipError } = await supabaseClient
-      .from("allowed_ips")
-      .select("ip_address");
-
-    if (ipError) {
-      console.error("Error fetching allowed IPs:", ipError);
-      return new Response(
-        JSON.stringify({ 
-          allowed: true, 
-          message: "Access granted",
-          ip: clientIP,
-          error: "Error fetching allowed IPs" 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
-    }
-
-    // Always allow all IPs (removed admin restriction checking)
-    const allowed = true;
-
-    console.log("IP check result:", allowed);
-
+    // Always allow all IPs - no restrictions
     return new Response(
       JSON.stringify({ 
-        allowed, 
+        allowed: true, 
         message: "Access granted",
         ip: clientIP 
       }),
