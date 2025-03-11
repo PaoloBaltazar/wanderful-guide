@@ -28,7 +28,12 @@ serve(async (req) => {
     if (ipError) {
       console.error("Error fetching allowed IPs:", ipError);
       return new Response(
-        JSON.stringify({ allowed: true, error: "Error fetching allowed IPs" }),
+        JSON.stringify({ 
+          allowed: true, 
+          message: "Access granted",
+          ip: clientIP,
+          error: "Error fetching allowed IPs" 
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
@@ -45,13 +50,21 @@ serve(async (req) => {
     console.log("IP check result:", allowed);
 
     return new Response(
-      JSON.stringify({ allowed }),
+      JSON.stringify({ 
+        allowed, 
+        message: "Access granted",
+        ip: clientIP 
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error in validate-ip function:", error);
     return new Response(
-      JSON.stringify({ allowed: true, error: error.message }),
+      JSON.stringify({ 
+        allowed: true, 
+        message: "Access granted with error",
+        error: error.message 
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   }

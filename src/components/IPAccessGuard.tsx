@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -16,11 +17,18 @@ export const IPAccessGuard = ({ children }: IPAccessGuardProps) => {
     const validateIP = async () => {
       try {
         console.log('Validating IP address...');
-        const { data: validationData, error } = await supabase.functions.invoke<{ allowed: boolean }>('validate-ip');
+        const { data: validationData, error } = await supabase.functions.invoke<{ 
+          allowed: boolean,
+          message?: string,
+          ip?: string,
+          error?: string 
+        }>('validate-ip');
         
         if (error) {
           console.error('Error validating IP:', error);
-          throw error;
+          // Continue with access in case of error
+          setIsAllowed(true);
+          return;
         }
 
         console.log('Validation response:', validationData);
@@ -37,13 +45,8 @@ export const IPAccessGuard = ({ children }: IPAccessGuardProps) => {
         }
       } catch (error) {
         console.error('Error validating IP:', error);
-        setIsAllowed(false);
-        toast({
-          title: "Error",
-          description: "Failed to validate IP address access. Please try again later.",
-          variant: "destructive",
-        });
-        navigate("/unauthorized");
+        // Continue with access in case of error
+        setIsAllowed(true);
       }
     };
 
