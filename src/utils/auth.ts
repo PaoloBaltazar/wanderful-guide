@@ -1,3 +1,4 @@
+
 import { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { SignupFormValues } from "@/types/auth";

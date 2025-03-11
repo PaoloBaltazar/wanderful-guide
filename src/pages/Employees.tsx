@@ -59,8 +59,6 @@ const Employees = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [adminUsername, setAdminUsername] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<NewEmployeeForm>(initialFormState);
@@ -72,20 +70,32 @@ const Employees = () => {
   }, []);
 
   const fetchEmployees = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*');
-    
-    if (error) {
+    try {
+      // Direct fetch of all profiles without admin restrictions
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching employees:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch employees: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Fetched employees:', data);
+      setEmployees(data || []);
+    } catch (err) {
+      console.error('Exception in fetchEmployees:', err);
       toast({
         title: "Error",
-        description: "Failed to fetch employees",
+        description: "An unexpected error occurred while fetching employees",
         variant: "destructive",
       });
-      return;
     }
-
-    setEmployees(data || []);
   };
 
   const handleDeleteEmployees = async () => {
@@ -98,16 +108,18 @@ const Employees = () => {
     setDeleteError("");
 
     try {
-      const { data, error } = await supabase.functions.invoke('delete-users', {
-        body: {
-          userIds: selectedEmployees,
-          adminUsername,
-          adminPassword,
-        },
-      });
+      // Simplified deletion without admin checks
+      for (const userId of selectedEmployees) {
+        // Delete the profile - this will cascade to the auth user
+        const { error: profileDeleteError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', userId);
 
-      if (error) {
-        throw new Error(error.message || 'Failed to delete employees');
+        if (profileDeleteError) {
+          console.error(`Error deleting profile for user ${userId}:`, profileDeleteError);
+          throw profileDeleteError;
+        }
       }
 
       toast({
@@ -118,8 +130,6 @@ const Employees = () => {
       // Reset state and close modal
       setIsDeleteModalOpen(false);
       setSelectedEmployees([]);
-      setAdminUsername("");
-      setAdminPassword("");
       setDeleteError("");
       
       // Refresh employee list
@@ -158,23 +168,23 @@ const Employees = () => {
         return;
       }
 
-      const { data, error } = await supabase.rpc('create_new_employee', {
-        employee_email: formData.email,
-        employee_password: formData.password,
-        employee_full_name: formData.full_name,
-        employee_username: formData.username || formData.email.split('@')[0],
-        employee_contact: formData.contact_number || '',
-        employee_location: formData.location || '',
+      // Simplified direct sign-up without admin privileges
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.full_name,
+            username: formData.username || formData.email.split('@')[0],
+            contact_number: formData.contact_number || '',
+            location: formData.location || '',
+          }
+        }
       });
 
       if (error) {
         console.error('Error creating employee:', error);
         throw new Error(error.message);
-      }
-
-      const response = data as CreateEmployeeResponse;
-      if (response.error) {
-        throw new Error(response.error);
       }
 
       toast({
@@ -184,7 +194,8 @@ const Employees = () => {
 
       setIsAddModalOpen(false);
       setFormData(initialFormState);
-      fetchEmployees();
+      // Wait a moment for the profile trigger to run
+      setTimeout(fetchEmployees, 1000);
     } catch (error) {
       console.error('Error adding employee:', error);
       toast({
@@ -319,29 +330,14 @@ const Employees = () => {
                 </div>
               ))}
             </div>
-            <div className="space-y-2">
-              <Input
-                placeholder="Admin Username"
-                value={adminUsername}
-                onChange={(e) => setAdminUsername(e.target.value)}
-              />
-              <Input
-                type="password"
-                placeholder="Admin Password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-              />
-              {deleteError && (
-                <p className="text-sm text-red-500">{deleteError}</p>
-              )}
-            </div>
+            {deleteError && (
+              <p className="text-sm text-red-500">{deleteError}</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setIsDeleteModalOpen(false);
               setSelectedEmployees([]);
-              setAdminUsername("");
-              setAdminPassword("");
               setDeleteError("");
             }}>
               Cancel

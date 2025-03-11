@@ -38,14 +38,8 @@ serve(async (req) => {
       );
     }
 
-    // For development purposes, allow all IPs
+    // Always allow all IPs (removed admin restriction checking)
     const allowed = true;
-    
-    /* Uncomment for production use
-    const allowed = allowedIPs.some(
-      (ip) => ip.ip_address === clientIP || ip.ip_address === "*"
-    );
-    */
 
     console.log("IP check result:", allowed);
 
