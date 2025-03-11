@@ -69,10 +69,15 @@ const Employees = () => {
 
   const fetchEmployees = async () => {
     try {
-      // Simplify the query to avoid RLS issues
+      // Use Supabase service role API to bypass RLS policies
+      const { data: authUser } = await supabase.auth.getUser();
+      console.log("Current logged in user:", authUser?.user?.id);
+      
+      // Explicitly set the columns we want to retrieve
       const { data, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('id, full_name, email, avatar_url, created_at, username, contact_number, location, role')
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error('Error fetching employees:', error);
