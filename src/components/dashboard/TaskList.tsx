@@ -20,6 +20,7 @@ export const TaskList = ({
 }: TaskListProps) => {
   // Subscribe to real-time updates
   useEffect(() => {
+    console.log("Setting up real-time subscription for tasks");
     const channel = supabase
       .channel('tasks_changes')
       .on(
@@ -29,13 +30,15 @@ export const TaskList = ({
           schema: 'public',
           table: 'tasks'
         },
-        () => {
+        (payload) => {
+          console.log("Real-time task update received:", payload);
           onTasksChange();
         }
       )
       .subscribe();
 
     return () => {
+      console.log("Cleaning up real-time subscription");
       supabase.removeChannel(channel);
     };
   }, [onTasksChange]);

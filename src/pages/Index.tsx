@@ -16,6 +16,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const fetchTasks = async () => {
+    console.log("Fetching tasks");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate('/login');
@@ -25,6 +26,7 @@ const Index = () => {
         variant: "destructive",
       });
     } else {
+      console.log("User is authenticated, fetching tasks for:", session.user.email);
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -32,12 +34,14 @@ const Index = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error("Error fetching tasks:", error);
         toast({
           title: "Error",
           description: "Failed to fetch tasks",
           variant: "destructive",
         });
       } else {
+        console.log("Tasks fetched successfully:", data);
         const tasksWithCorrectTypes = (data || []).map(task => ({
           ...task,
           priority: task.priority as Task["priority"],
@@ -53,21 +57,26 @@ const Index = () => {
     fetchTasks();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event);
       if (event === 'SIGNED_OUT') {
         navigate('/login');
+      } else if (event === 'SIGNED_IN' && session) {
+        fetchTasks();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const handleStatusChange = (taskId: string, newStatus: Task["status"]) => {
+    console.log("Changing task status:", taskId, newStatus);
     setTasks(tasks.map(task => 
       task.id === taskId ? { ...task, status: newStatus } : task
     ));
   };
 
   const handleTaskCreated = async (newTask: Task) => {
+    console.log("Task created:", newTask);
     const { data: { session } } = await supabase.auth.getSession();
     if (session && newTask.assigned_to === session.user.email) {
       setTasks(prevTasks => [newTask, ...prevTasks]);

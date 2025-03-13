@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -110,6 +110,7 @@ export const TaskFormContent = ({ onSuccess, onCancel }: TaskFormContentProps) =
         return;
       }
 
+      // Create the new task with self-assignment (user creates and is assigned to the task)
       const newTask = {
         title,
         deadline,
@@ -120,13 +121,20 @@ export const TaskFormContent = ({ onSuccess, onCancel }: TaskFormContentProps) =
         user_id: user.id,
       };
 
+      console.log("Creating task:", newTask);
+
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
         .insert([newTask])
         .select()
         .single();
 
-      if (taskError) throw taskError;
+      if (taskError) {
+        console.error("Task creation error:", taskError);
+        throw taskError;
+      }
+
+      console.log("Task created successfully:", taskData);
 
       if (selectedFiles.length > 0) {
         await uploadFiles(taskData.id);
