@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Task } from "@/types/task";
 import { supabase } from "@/lib/supabase";
@@ -7,7 +8,6 @@ import { TaskItem } from "./TaskItem";
 interface TaskListProps {
   title: string;
   tasks: Task[];
-  showAssignment?: boolean;
   onStatusChange?: (taskId: string, newStatus: Task["status"]) => void;
   onTasksChange: () => void;
 }
@@ -15,7 +15,6 @@ interface TaskListProps {
 export const TaskList = ({ 
   title, 
   tasks, 
-  showAssignment = true, 
   onStatusChange,
   onTasksChange 
 }: TaskListProps) => {
@@ -51,7 +50,6 @@ export const TaskList = ({
           <TaskItem
             key={task.id}
             task={task}
-            showAssignment={showAssignment}
             onStatusChange={onStatusChange}
             onTasksChange={onTasksChange}
           />

@@ -1,3 +1,4 @@
+
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/types/task";
 import { supabase } from "@/lib/supabase";
@@ -12,7 +13,6 @@ import { format } from "date-fns";
 
 interface TaskItemProps {
   task: Task;
-  showAssignment?: boolean;
   onStatusChange?: (taskId: string, newStatus: Task["status"]) => void;
   onTasksChange: () => void;
 }
@@ -24,16 +24,8 @@ interface TaskDocument {
   file_type: string;
 }
 
-interface Profile {
-  id: string;
-  username: string | null;
-  full_name: string;
-  email: string;
-}
-
 export const TaskItem = ({ 
   task, 
-  showAssignment = true,
   onStatusChange,
   onTasksChange 
 }: TaskItemProps) => {
@@ -43,32 +35,12 @@ export const TaskItem = ({
   const [selectedDocument, setSelectedDocument] = useState<TaskDocument | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [assignedUser, setAssignedUser] = useState<Profile | null>(null);
-
-  useEffect(() => {
-    fetchAssignedUser();
-  }, [task.assigned_to]);
 
   useEffect(() => {
     if (isExpanded) {
       fetchTaskDocuments();
     }
   }, [isExpanded]);
-
-  const fetchAssignedUser = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, full_name, email')
-        .eq('email', task.assigned_to)
-        .single();
-
-      if (error) throw error;
-      setAssignedUser(data);
-    } catch (error) {
-      console.error('Error fetching assigned user:', error);
-    }
-  };
 
   const fetchTaskDocuments = async () => {
     try {
@@ -155,11 +127,6 @@ export const TaskItem = ({
     } catch (error) {
       return deadline;
     }
-  };
-
-  const getDisplayName = () => {
-    if (!assignedUser) return task.assigned_to;
-    return assignedUser.username || assignedUser.full_name || assignedUser.email;
   };
 
   const getNextStatus = (currentStatus: Task["status"]): Task["status"] => {
@@ -258,14 +225,9 @@ export const TaskItem = ({
         className="flex items-center justify-between p-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex-1 min-w-0"> {/* Added min-w-0 to enable text truncation */}
+        <div className="flex-1 min-w-0">
           <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">{task.title}</h3>
           <div className="space-y-1 mt-1">
-            {showAssignment && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-1">
-                <span className="truncate">Assigned to: {getDisplayName()}</span>
-              </p>
-            )}
             <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-1">
               <Calendar className="w-4 h-4 flex-shrink-0" />
               <span className="truncate">Due: {formatDeadline(task.deadline)}</span>
@@ -309,7 +271,7 @@ export const TaskItem = ({
                         className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                         onClick={() => handleView(doc)}
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1"> {/* Added min-w-0 and flex-1 */}
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
                           <span className="text-sm truncate">{doc.title}</span>
                         </div>
@@ -347,7 +309,7 @@ export const TaskItem = ({
       )}
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-3xl w-[95vw]"> {/* Added w-[95vw] for better mobile display */}
+        <DialogContent className="max-w-3xl w-[95vw]">
           <DialogTitle className="text-lg font-semibold truncate">
             {selectedDocument?.title}
           </DialogTitle>

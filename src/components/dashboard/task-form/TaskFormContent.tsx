@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,13 +15,6 @@ import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { Upload, X } from "lucide-react";
 
-interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  avatar_url: string | null;
-}
-
 interface TaskFormContentProps {
   onSuccess: (task: Task) => void;
   onCancel: () => void;
@@ -30,33 +24,10 @@ export const TaskFormContent = ({ onSuccess, onCancel }: TaskFormContentProps) =
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("medium");
-  const [assignedTo, setAssignedTo] = useState("");
-  const [employees, setEmployees] = useState<Profile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch employees",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setEmployees(data as Profile[]);
-    };
-
-    fetchEmployees();
-  }, [toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -139,23 +110,13 @@ export const TaskFormContent = ({ onSuccess, onCancel }: TaskFormContentProps) =
         return;
       }
 
-      const assignedEmployee = employees.find(emp => emp.id === assignedTo);
-      if (!assignedEmployee) {
-        toast({
-          title: "Error",
-          description: "Please select a valid assignee",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const newTask = {
         title,
         deadline,
         priority,
         status: "pending" as const,
         created_by: user.email || "Unknown",
-        assigned_to: assignedEmployee.email,
+        assigned_to: user.email || "Unknown", // Self-assign tasks
         user_id: user.id,
       };
 
@@ -238,26 +199,6 @@ export const TaskFormContent = ({ onSuccess, onCancel }: TaskFormContentProps) =
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="high">High</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2.5">
-          <label htmlFor="assignedTo" className="text-sm font-medium text-foreground">
-            Assign To
-          </label>
-          <Select
-            value={assignedTo}
-            onValueChange={setAssignedTo}
-          >
-            <SelectTrigger className="w-full transition-colors">
-              <SelectValue placeholder="Select assignee" />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.full_name}
-                </SelectItem>
-              ))}
             </SelectContent>
           </Select>
         </div>

@@ -8,15 +8,6 @@ import { taskService } from "@/services/taskService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/supabase";
-
-interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  avatar_url: string | null;
-  created_at: string;
-}
 
 const Tasks = () => {
   const { toast } = useToast();
@@ -24,7 +15,6 @@ const Tasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['tasks'],
@@ -33,42 +23,20 @@ const Tasks = () => {
     gcTime: 0,
   });
 
-  const { data: employees = [], isLoading: employeesLoading } = useQuery({
-    queryKey: ['employees'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch employees",
-          variant: "destructive",
-        });
-        return [];
-      }
-      return data as Profile[];
-    },
-  });
-
   const filteredTasks = tasks.filter((task: Task) => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.created_by.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.assigned_to.toLowerCase().includes(searchTerm.toLowerCase());
+                         task.created_by.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPriority = priorityFilter === "all" ? true : task.priority === priorityFilter;
     const matchesStatus = statusFilter === "all" ? true : task.status === statusFilter;
-    const matchesEmployee = employeeFilter === "all" ? true : 
-                          task.assigned_to === employeeFilter || task.created_by === employeeFilter;
     
-    return matchesSearch && matchesPriority && matchesStatus && matchesEmployee;
+    return matchesSearch && matchesPriority && matchesStatus;
   });
 
   const handleTasksChange = () => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
   };
 
-  if (tasksLoading || employeesLoading) {
+  if (tasksLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-screen">
@@ -86,11 +54,11 @@ const Tasks = () => {
           <p className="text-gray-600 mt-1 text-sm md:text-base">View and manage all HR department tasks</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Search Tasks</label>
             <Input
-              placeholder="Search by title, creator, or assignee..."
+              placeholder="Search by title or creator..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
@@ -121,22 +89,6 @@ const Tasks = () => {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="in-progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Employee</label>
-            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by employee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Employees</SelectItem>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.email}>
-                    {employee.full_name}
-                  </SelectItem>
-                ))}
               </SelectContent>
             </Select>
           </div>
