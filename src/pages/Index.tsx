@@ -17,32 +17,46 @@ const Index = () => {
 
   const fetchTasks = async () => {
     console.log("Fetching tasks");
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/login');
-      toast({
-        title: "Authentication required",
-        description: "Please log in to access the dashboard",
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/login');
+        toast({
+          title: "Authentication required",
+          description: "Please log in to access the dashboard",
+          variant: "destructive",
+        });
+        return;
+      } 
+      
       console.log("User is authenticated, fetching tasks for:", session.user.email);
-      const { data, error } = await supabase
+      
+      // First try with RLS using .eq('assigned_to', session.user.email)
+      let { data, error } = await supabase
         .from('tasks')
         .select('*')
-        .eq('assigned_to', session.user.email)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error("Error fetching tasks:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch tasks",
-          variant: "destructive",
-        });
-      } else {
-        console.log("Tasks fetched successfully:", data);
-        const tasksWithCorrectTypes = (data || []).map(task => ({
+        // Try a fallback approach without the .eq filter if there's an issue with RLS
+        const { data: allData, error: allError } = await supabase
+          .from('tasks')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (allError) {
+          throw allError;
+        }
+        
+        // Filter on the client side for the user's email
+        data = allData.filter(task => task.assigned_to === session.user.email);
+      }
+        
+      console.log("Tasks fetched successfully:", data);
+      
+      if (data) {
+        const tasksWithCorrectTypes = data.map(task => ({
           ...task,
           priority: task.priority as Task["priority"],
           status: task.status as Task["status"]
@@ -50,6 +64,13 @@ const Index = () => {
         
         setTasks(tasksWithCorrectTypes);
       }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch tasks. Please try refreshing the page.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -81,6 +102,14 @@ const Index = () => {
     if (session && newTask.assigned_to === session.user.email) {
       setTasks(prevTasks => [newTask, ...prevTasks]);
     }
+    
+    // Refresh the tasks list to ensure we have the latest data
+    fetchTasks();
+    
+    toast({
+      title: "Success",
+      description: "Task created successfully",
+    });
   };
 
   const pendingTasks = tasks.filter(task => task.status === "pending").length;

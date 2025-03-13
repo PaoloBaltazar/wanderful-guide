@@ -35,7 +35,9 @@ export const TaskList = ({
           onTasksChange();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     return () => {
       console.log("Cleaning up real-time subscription");
@@ -49,6 +51,11 @@ export const TaskList = ({
         <h2 className="text-lg md:text-xl font-semibold">{title}</h2>
       </div>
       <div className="p-4 md:p-6 space-y-4">
+        {tasks.length === 0 && (
+          <div className="text-center py-6 md:py-8 text-gray-500 dark:text-gray-400 text-sm md:text-base">
+            No tasks found
+          </div>
+        )}
         {tasks.map((task) => (
           <TaskItem
             key={task.id}
@@ -57,11 +64,6 @@ export const TaskList = ({
             onTasksChange={onTasksChange}
           />
         ))}
-        {tasks.length === 0 && (
-          <div className="text-center py-6 md:py-8 text-gray-500 dark:text-gray-400 text-sm md:text-base">
-            No tasks found
-          </div>
-        )}
       </div>
     </Card>
   );
