@@ -10,7 +10,6 @@ import Login from "@/pages/Login";
 import SuccessConfirmation from "@/pages/SuccessConfirmation";
 import Notifications from "@/pages/Notifications";
 import Calendar from "@/pages/Calendar";
-import Employees from "@/pages/Employees";
 import Documents from "@/pages/Documents";
 import IPManagement from "@/pages/IPManagement";
 import Unauthorized from "@/pages/Unauthorized";
@@ -73,14 +72,6 @@ function App() {
               element={
                 <IPAccessGuard>
                   <Calendar />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/employees"
-              element={
-                <IPAccessGuard>
-                  <Employees />
                 </IPAccessGuard>
               }
             />
