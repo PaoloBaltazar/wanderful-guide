@@ -9,270 +9,172 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      allowed_ips: {
+      document_versions: {
         Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          ip_address: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          ip_address: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          ip_address?: string
-        }
-        Relationships: []
-      }
-      audit_logs: {
-        Row: {
-          action: string
-          created_at: string
-          id: string
-          ip_address: string | null
-          new_data: Json | null
-          old_data: Json | null
-          record_id: string
-          table_name: string
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          id?: string
-          ip_address?: string | null
-          new_data?: Json | null
-          old_data?: Json | null
-          record_id: string
-          table_name: string
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          id?: string
-          ip_address?: string | null
-          new_data?: Json | null
-          old_data?: Json | null
-          record_id?: string
-          table_name?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      comments: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          mentions: string[] | null
-          task_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          mentions?: string[] | null
-          task_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          mentions?: string[] | null
-          task_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      documents: {
-        Row: {
-          content: string | null
           created_at: string
           created_by: string
+          document_name: string
           file_path: string
-          file_type: string
+          file_size: number | null
+          file_type: string | null
           id: string
-          last_modified: string
-          size: number
-          title: string
+          notes: string | null
+          version_number: number
         }
         Insert: {
-          content?: string | null
           created_at?: string
           created_by: string
+          document_name: string
           file_path: string
-          file_type: string
+          file_size?: number | null
+          file_type?: string | null
           id?: string
-          last_modified?: string
-          size: number
-          title: string
+          notes?: string | null
+          version_number: number
         }
         Update: {
-          content?: string | null
           created_at?: string
           created_by?: string
+          document_name?: string
           file_path?: string
-          file_type?: string
+          file_size?: number | null
+          file_type?: string | null
           id?: string
-          last_modified?: string
-          size?: number
-          title?: string
+          notes?: string | null
+          version_number?: number
         }
         Relationships: []
       }
-      documents_tasks: {
+      employees: {
         Row: {
+          address: string | null
+          birthdate: string | null
+          contact_number: string | null
           created_at: string
-          document_id: string | null
+          email: string
           id: string
-          task_id: string | null
+          name: string
+          position: string | null
+          role: string
+          username: string | null
         }
         Insert: {
+          address?: string | null
+          birthdate?: string | null
+          contact_number?: string | null
           created_at?: string
-          document_id?: string | null
+          email: string
           id?: string
-          task_id?: string | null
+          name: string
+          position?: string | null
+          role?: string
+          username?: string | null
         }
         Update: {
+          address?: string | null
+          birthdate?: string | null
+          contact_number?: string | null
           created_at?: string
-          document_id?: string | null
+          email?: string
           id?: string
-          task_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "documents_tasks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_tasks_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employee_performance: {
-        Row: {
-          employee_id: string | null
-          id: string
-          metric_name: string
-          metric_value: number
-          notes: string | null
-          recorded_at: string | null
-        }
-        Insert: {
-          employee_id?: string | null
-          id?: string
-          metric_name: string
-          metric_value: number
-          notes?: string | null
-          recorded_at?: string | null
-        }
-        Update: {
-          employee_id?: string | null
-          id?: string
-          metric_name?: string
-          metric_value?: number
-          notes?: string | null
-          recorded_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_performance_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      failed_login_attempts: {
-        Row: {
-          created_at: string
-          email: string | null
-          id: string
-          ip_address: string | null
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          ip_address?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          ip_address?: string | null
+          name?: string
+          position?: string | null
+          role?: string
+          username?: string | null
         }
         Relationships: []
       }
       notifications: {
         Row: {
+          content: string
           created_at: string
           id: string
-          message: string
-          status: string
-          task_id: string
+          read: boolean
+          recipient: string
+          related_id: string | null
           title: string
           type: string
-          user_id: string
         }
         Insert: {
+          content: string
           created_at?: string
           id?: string
-          message: string
-          status?: string
-          task_id: string
+          read?: boolean
+          recipient: string
+          related_id?: string | null
           title: string
           type: string
-          user_id: string
         }
         Update: {
+          content?: string
           created_at?: string
           id?: string
-          message?: string
-          status?: string
-          task_id?: string
+          read?: boolean
+          recipient?: string
+          related_id?: string | null
           title?: string
           type?: string
-          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      task_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          task_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          task_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          task_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "notifications_task_id_fkey"
+            foreignKeyName: "task_attachments_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -280,216 +182,326 @@ export type Database = {
           },
         ]
       }
-      profiles: {
+      task_categories: {
         Row: {
-          address: string | null
-          avatar_url: string | null
-          birthdate: string | null
-          contact_number: string | null
+          color: string
           created_at: string
-          email: string | null
-          encrypted_data: string | null
-          full_name: string | null
-          gender: string | null
           id: string
-          location: string | null
-          position: string | null
-          role: string | null
-          username: string | null
+          name: string
         }
         Insert: {
-          address?: string | null
-          avatar_url?: string | null
-          birthdate?: string | null
-          contact_number?: string | null
+          color?: string
           created_at?: string
-          email?: string | null
-          encrypted_data?: string | null
-          full_name?: string | null
-          gender?: string | null
-          id: string
-          location?: string | null
-          position?: string | null
-          role?: string | null
-          username?: string | null
+          id?: string
+          name: string
         }
         Update: {
-          address?: string | null
-          avatar_url?: string | null
-          birthdate?: string | null
-          contact_number?: string | null
+          color?: string
           created_at?: string
-          email?: string | null
-          encrypted_data?: string | null
-          full_name?: string | null
-          gender?: string | null
           id?: string
-          location?: string | null
-          position?: string | null
-          role?: string | null
-          username?: string | null
+          name?: string
         }
         Relationships: []
       }
-      security_audits: {
+      task_comments: {
         Row: {
-          audit_type: string
+          content: string
           created_at: string
-          findings: Json | null
           id: string
-          resolved_at: string | null
-          severity: string
+          mentioned_employees: string[] | null
+          task_id: string
+          user_email: string
         }
         Insert: {
-          audit_type: string
+          content: string
           created_at?: string
-          findings?: Json | null
           id?: string
-          resolved_at?: string | null
-          severity: string
+          mentioned_employees?: string[] | null
+          task_id: string
+          user_email: string
         }
         Update: {
-          audit_type?: string
+          content?: string
           created_at?: string
-          findings?: Json | null
           id?: string
-          resolved_at?: string | null
-          severity?: string
+          mentioned_employees?: string[] | null
+          task_id?: string
+          user_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          recipient: string
+          remind_at: string
+          sent: boolean
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recipient: string
+          remind_at: string
+          sent?: boolean
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recipient?: string
+          remind_at?: string
+          sent?: boolean
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
-      security_headers: {
+      task_templates: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          creator: string
+          description: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          creator: string
+          description?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          creator?: string
+          description?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "task_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_to_tags: {
         Row: {
           created_at: string
-          enabled: boolean | null
-          header_name: string
-          header_value: string
           id: string
-          updated_at: string
+          tag_id: string
+          task_id: string
         }
         Insert: {
           created_at?: string
-          enabled?: boolean | null
-          header_name: string
-          header_value: string
           id?: string
-          updated_at?: string
+          tag_id: string
+          task_id: string
         }
         Update: {
           created_at?: string
-          enabled?: boolean | null
-          header_name?: string
-          header_value?: string
           id?: string
-          updated_at?: string
+          tag_id?: string
+          task_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "task_to_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "task_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_to_tags_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
-          assigned_to: string
+          assignee: string
+          category_id: string | null
           created_at: string
-          created_by: string
-          deadline: string
+          creator: string
+          description: string | null
+          due_date: string
           id: string
           priority: string
           status: string
           title: string
-          user_id: string
         }
         Insert: {
-          assigned_to: string
+          assignee: string
+          category_id?: string | null
           created_at?: string
-          created_by: string
-          deadline: string
+          creator?: string
+          description?: string | null
+          due_date: string
           id?: string
-          priority: string
-          status: string
+          priority?: string
+          status?: string
           title: string
-          user_id: string
         }
         Update: {
-          assigned_to?: string
+          assignee?: string
+          category_id?: string | null
           created_at?: string
-          created_by?: string
-          deadline?: string
+          creator?: string
+          description?: string | null
+          due_date?: string
           id?: string
           priority?: string
           status?: string
           title?: string
-          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "task_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      user_roles: {
+      template_to_tags: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          tag_id: string
+          template_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          tag_id: string
+          template_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
+          tag_id?: string
+          template_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "template_to_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "task_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_to_tags_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      create_new_employee: {
+      add_task_comment: {
         Args: {
-          employee_email: string
-          employee_password: string
-          employee_full_name: string
-          employee_username: string
-          employee_contact: string
-          employee_location: string
-          employee_role?: string
+          p_task_id: string
+          p_user_email: string
+          p_content: string
+          p_mentioned_employees?: string[]
         }
         Returns: Json
       }
-      decrypt_sensitive_data: {
+      check_ip_authorization: {
         Args: {
-          encrypted_data: string
-          key: string
+          check_ip: string
         }
-        Returns: string
-      }
-      encrypt_sensitive_data: {
-        Args: {
-          data: string
-          key: string
-        }
-        Returns: string
-      }
-      get_user_role: {
-        Args: {
-          user_id: string
-        }
-        Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      is_authenticated: {
+      get_task_comments: {
+        Args: {
+          p_task_id: string
+        }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          mentioned_employees: string[] | null
+          task_id: string
+          user_email: string
+        }[]
+      }
+      get_task_comments_count: {
+        Args: {
+          p_task_id: string
+        }
+        Returns: number
+      }
+      process_due_reminders: {
         Args: Record<PropertyKey, never>
-        Returns: boolean
+        Returns: undefined
+      }
+      send_private_message: {
+        Args: {
+          sender_email: string
+          recipient_email: string
+          message_content: string
+        }
+        Returns: Json
       }
     }
     Enums: {
-      app_role: "admin" | "employee"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never

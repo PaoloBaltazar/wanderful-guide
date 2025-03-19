@@ -1,100 +1,127 @@
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SessionContextProvider } from "@supabase/auth-helpers-react";
-import { supabase } from "@/lib/supabase";
-import { IPAccessGuard } from "@/components/IPAccessGuard";
-import Index from "@/pages/Index";
-import Tasks from "@/pages/Tasks";
-import Login from "@/pages/Login";
-import SuccessConfirmation from "@/pages/SuccessConfirmation";
-import Notifications from "@/pages/Notifications";
-import Calendar from "@/pages/Calendar";
-import Documents from "@/pages/Documents";
-import IPManagement from "@/pages/IPManagement";
-import Unauthorized from "@/pages/Unauthorized";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/components/NotificationProvider";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "sonner";
+import LocationVerification from "@/components/LocationVerification";
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
-});
+// Pages
+import AuthCallback from "@/pages/AuthCallback";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import Index from "@/pages/Index";
+import NotFound from "@/pages/NotFound";
+import Tasks from "@/pages/Tasks";
+import ViewTask from "@/pages/ViewTask";
+import CreateTask from "@/pages/CreateTask";
+import Calendar from "@/pages/Calendar";
+import Employees from "@/pages/Employees";
+import Documents from "@/pages/Documents";
+import Settings from "@/pages/Settings";
+import Notifications from "@/pages/Notifications";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <SessionContextProvider supabaseClient={supabase}>
-        <Router>
-          <Routes>
-            {/* Public routes that don't require IP validation */}
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="/success-confirmation" element={<SuccessConfirmation />} />
-            
-            {/* Protected routes that require IP validation, including login */}
-            <Route
-              path="/login"
-              element={
-                <IPAccessGuard>
-                  <Login />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <IPAccessGuard>
-                  <Index />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <IPAccessGuard>
-                  <Tasks />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <IPAccessGuard>
-                  <Notifications />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <IPAccessGuard>
-                  <Calendar />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/documents"
-              element={
-                <IPAccessGuard>
-                  <Documents />
-                </IPAccessGuard>
-              }
-            />
-            <Route
-              path="/ip-management"
-              element={
-                <IPAccessGuard>
-                  <IPManagement />
-                </IPAccessGuard>
-              }
-            />
-          </Routes>
-        </Router>
-      </SessionContextProvider>
-    </QueryClientProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <NotificationProvider>
+          <LocationVerification>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+
+              {/* Protected Routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute>
+                    <Tasks />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks/:taskId"
+                element={
+                  <ProtectedRoute>
+                    <ViewTask />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/create-task"
+                element={
+                  <ProtectedRoute>
+                    <CreateTask />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <Calendar />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/employees"
+                element={
+                  <ProtectedRoute>
+                    <Employees />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <Documents />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Catch All */}
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/404" />} />
+            </Routes>
+          </LocationVerification>
+        </NotificationProvider>
+        <Toaster />
+        <Sonner position="top-right" />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
